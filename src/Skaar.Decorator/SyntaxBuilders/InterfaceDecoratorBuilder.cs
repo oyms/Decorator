@@ -1,22 +1,24 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Skaar.Decorator.Models;
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Skaar.Decorator.SyntaxBuilders;
 
-class InterfaceDecoratorBuilder(string name, string @namespace, InterfaceDeclarationSyntax targetNode)
+class InterfaceDecoratorBuilder(TargetName name, InterfaceDeclarationSyntax targetNode)
     : BuilderBase
 {
-    public override string Name => $"{@namespace}.{name}";
+    public override string Name => name.WrapperFullName;
     public override SyntaxNode Node()
     {
         var namespaceDeclaration = SF
-            .NamespaceDeclaration(SF.ParseName(@namespace))
+            .NamespaceDeclaration(SF.ParseName(name.Namespace))
             .NormalizeWhitespace();
-        var classDeclaration = SF.ClassDeclaration(name)
+        var classDeclaration = SF.ClassDeclaration(name.WrapperName)
             .AddModifiers(Modifiers(SyntaxKind.PublicKeyword,SyntaxKind.AbstractKeyword))
             .AddBaseListTypes(SF.SimpleBaseType(ParseTargetTypeName()))
             .AddAttributeLists(BuildGeneratedCodeAttribute())
@@ -28,7 +30,7 @@ class InterfaceDecoratorBuilder(string name, string @namespace, InterfaceDeclara
     }
 
     private TypeSyntax ParseTargetTypeName() => 
-        SF.ParseTypeName(targetNode.Identifier.ToString());
+        SF.ParseTypeName(name.ToString());
 
     private IEnumerable<MemberDeclarationSyntax> BuildMembers()
     {
@@ -37,7 +39,7 @@ class InterfaceDecoratorBuilder(string name, string @namespace, InterfaceDeclara
             SF.VariableDeclaration(ParseTargetTypeName())
                 .AddVariables(SF.VariableDeclarator(innerField.Identifier)))
             .AddModifiers(Modifiers(SyntaxKind.PrivateKeyword, SyntaxKind.ReadOnlyKeyword));
-        yield return SF.ConstructorDeclaration(name)
+        yield return SF.ConstructorDeclaration(name.WrapperName)
             .AddModifiers(Modifiers(SyntaxKind.ProtectedKeyword))
             .AddParameterListParameters(
                 SF.Parameter(SF.Identifier("inner"))
@@ -57,14 +59,24 @@ class InterfaceDecoratorBuilder(string name, string @namespace, InterfaceDeclara
                 yield return SF.MethodDeclaration(targetMethod.ReturnType, targetMethod.Identifier)
                     .AddModifiers(Modifiers(SyntaxKind.PublicKeyword, SyntaxKind.VirtualKeyword))
                     .AddParameterListParameters(
-                        targetMethod.ParameterList.Parameters.Select(p =>
-                                SF.Parameter(p.Identifier)
-                                    .WithType(p.Type))
-                            .ToArray()
+                        targetMethod.ParameterList.Parameters.Select(BuildParameter).ToArray()
                     )
                     .WithBody(SF.Block(BuildMethodBody(innerField, targetMethod)));
             }
         }
+    }
+
+    private ParameterSyntax BuildParameter(ParameterSyntax targetParameter)
+    {
+        var result = SF.Parameter(targetParameter.Identifier)
+            .WithType(targetParameter.Type);
+        
+        foreach (var targetParameterModifier in targetParameter.Modifiers)
+        {
+            result = result.AddModifiers(targetParameterModifier);
+        }
+
+        return result;
     }
 
     private StatementSyntax BuildMethodBody(IdentifierNameSyntax innerField, MethodDeclarationSyntax targetMethod)
@@ -81,7 +93,7 @@ class InterfaceDecoratorBuilder(string name, string @namespace, InterfaceDeclara
             expression = expression.AddArgumentListArguments(
                     targetMethod.ParameterList
                         .Parameters
-                        .Select(p => SF.Argument(SF.IdentifierName(p.Identifier)))
+                        .Select(BuildArgument)
                         .ToArray()
                 );
         }
@@ -91,6 +103,21 @@ class InterfaceDecoratorBuilder(string name, string @namespace, InterfaceDeclara
             return SF.ExpressionStatement(expression);
         }
         return SF.ReturnStatement(expression);
+
+        ArgumentSyntax BuildArgument(ParameterSyntax targetParameter)
+        {
+            var result = SF.Argument(SF.IdentifierName(targetParameter.Identifier));
+            if (targetParameter.Modifiers.Any(m => m.IsKind(SyntaxKind.OutKeyword)))
+            {
+                result = result.WithRefOrOutKeyword(SF.Token(SyntaxKind.OutKeyword));
+            }            
+            if (targetParameter.Modifiers.Any(m => m.IsKind(SyntaxKind.RefKeyword)))
+            {
+                result = result.WithRefOrOutKeyword(SF.Token(SyntaxKind.RefKeyword));
+            }
+
+            return result;
+        }
     }
     
     private bool IsVoidMethod(MethodDeclarationSyntax methodDeclaration)

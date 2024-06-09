@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Text;
+using System.Collections.Generic;
 using System.Threading;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 using Skaar.Decorator.Extensions;
 using Skaar.Decorator.Models;
 using Skaar.Decorator.SyntaxBuilders;
@@ -15,7 +10,7 @@ using Skaar.Decorator.SyntaxBuilders;
 namespace Skaar.Decorator;
 
 [Generator]
-public class BaseclassGenerator: IIncrementalGenerator
+public class Generator: IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -28,24 +23,41 @@ public class BaseclassGenerator: IIncrementalGenerator
         context.RegisterSourceOutput(pipeline, RenderDecoratorClass);
     }
 
-    private static TargetTypeModel BuildModel(GeneratorAttributeSyntaxContext ctx, CancellationToken _)
+    private TargetTypeModel BuildModel(GeneratorAttributeSyntaxContext ctx, CancellationToken _)
     {
         var targetSymbol = ctx.TargetSymbol;
-        return new TargetTypeModel(
-            Namespace: targetSymbol.ContainingNamespace?.ToDisplayString(
+        var name = new TargetName(
+            targetSymbol.Name, 
+            targetSymbol.ContainingNamespace?.ToDisplayString(
                 SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(
-                    SymbolDisplayGlobalNamespaceStyle.Omitted)),
-            Name: $"{targetSymbol.Name}Decorator".TrimStart('I'),//Smarter handling
+                    SymbolDisplayGlobalNamespaceStyle.Omitted)), 
+            ContainingTypeNames(targetSymbol),
+            TargetType.Interface);
+        return new TargetTypeModel(
+            Name: name,
             Node: ctx.TargetNode,
             Type: TargetType.Interface);
     }
 
-    private static void RenderDecoratorClass(SourceProductionContext ctx, TargetTypeModel model)
+    private IEnumerable<string> ContainingTypeNames(ISymbol symbol)
+    {
+        var parent = symbol.ContainingType;
+        if (parent is null) yield break;
+        foreach (var containingTypeName in ContainingTypeNames(parent))
+        {
+            yield return containingTypeName;
+        }
+
+        yield return parent.Name;
+    }
+
+    private void RenderDecoratorClass(SourceProductionContext ctx, TargetTypeModel model)
     {
         switch (model.Type)
         {
             case TargetType.Interface:
-                var builder = new InterfaceDecoratorBuilder(model.Name, model.Namespace,
+                var builder = new InterfaceDecoratorBuilder(
+                    model.Name, 
                     (InterfaceDeclarationSyntax)model.Node);
                 ctx.AddSource(builder.Name, builder.GetSource());
                 break;
@@ -54,7 +66,7 @@ public class BaseclassGenerator: IIncrementalGenerator
     }
 
 
-    private static void GenerateAttribute(IncrementalGeneratorPostInitializationContext ctx)
+    private void GenerateAttribute(IncrementalGeneratorPostInitializationContext ctx)
     {
         var builder = new GenerateDecoratorAttributeBuilder();
         ctx.AddSource(builder.Name, builder.GetSource());
