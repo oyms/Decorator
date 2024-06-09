@@ -1,4 +1,5 @@
 using System.CodeDom.Compiler;
+using System.Linq;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -8,6 +9,7 @@ namespace Skaar.Decorator.SyntaxBuilders;
 
 abstract class BuilderBase
 {
+    public abstract string Name { get; }
     public abstract SyntaxNode Node();
     protected AttributeListSyntax BuildGeneratedCodeAttribute()
     {
@@ -23,5 +25,8 @@ abstract class BuilderBase
                             SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(assName.Version.ToString())))
                 )));
     }
+
+    protected SyntaxToken[] Modifiers(params SyntaxKind[] kind) => 
+        kind.Select(k => SyntaxFactory.Token(k)).ToArray();
     public override string ToString() => Node().ToFullString();
 }

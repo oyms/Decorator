@@ -6,7 +6,7 @@ namespace Skaar.Decorator.SyntaxBuilders;
 
 class GenerateDecoratorAttributeBuilder : BuilderBase
 {
-    public string Name => Constants.AttributeName;
+    public override string Name => Constants.AttributeName;
 
     public override SyntaxNode Node()
     {
@@ -14,11 +14,9 @@ class GenerateDecoratorAttributeBuilder : BuilderBase
         {
             SF.UsingDirective(SF.ParseName("System"))
         };
-        var namespaceDeclaration = SF
-            .NamespaceDeclaration(SF.ParseName(Constants.Namespace))
-            .NormalizeWhitespace();
+        var namespaceDeclaration = SF.NamespaceDeclaration(SF.ParseName(Constants.Namespace));
         var classDeclaration = SF.ClassDeclaration(Constants.AttributeName)
-            .AddModifiers(SF.Token(SyntaxKind.PublicKeyword))
+            .AddModifiers(Modifiers(SyntaxKind.PublicKeyword))
             .AddBaseListTypes(SF.SimpleBaseType(SF.ParseTypeName("Attribute")))
             .AddAttributeLists(
                 BuildGeneratedCodeAttribute(),
@@ -42,12 +40,10 @@ class GenerateDecoratorAttributeBuilder : BuilderBase
             )
             .AddMembers();
 
-        var compilationUnit = SF.CompilationUnit()
+        return SF.CompilationUnit()
             .AddUsings(usingDirectives)
             .AddMembers(namespaceDeclaration.AddMembers(classDeclaration.WithLeadingTrivia(BuildTrivia())))
             .NormalizeWhitespace();
-
-        return compilationUnit;
     }
 
     private SyntaxTriviaList BuildTrivia()

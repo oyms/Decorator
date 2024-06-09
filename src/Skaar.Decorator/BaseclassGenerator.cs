@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using Skaar.Decorator.Extensions;
 using Skaar.Decorator.Models;
 using Skaar.Decorator.SyntaxBuilders;
 
@@ -24,40 +25,32 @@ public class BaseclassGenerator: IIncrementalGenerator
             (node, _) => node is InterfaceDeclarationSyntax,
             BuildModel);
         
-        context.RegisterSourceOutput(pipeline, RenderDecoratorClassFromInterface);
+        context.RegisterSourceOutput(pipeline, RenderDecoratorClass);
     }
 
     private static TargetTypeModel BuildModel(GeneratorAttributeSyntaxContext ctx, CancellationToken _)
     {
         var targetSymbol = ctx.TargetSymbol;
-        var targetNode = ctx.TargetNode as InterfaceDeclarationSyntax;
         return new TargetTypeModel(
             Namespace: targetSymbol.ContainingNamespace?.ToDisplayString(
                 SymbolDisplayFormat.FullyQualifiedFormat.WithGlobalNamespaceStyle(
                     SymbolDisplayGlobalNamespaceStyle.Omitted)),
-            Name: targetSymbol.Name,
-            Members: new(targetNode.Members))
-        {
-            KastMeg = string.Join(" ", targetNode.Members.ToFullString())
-        };
+            Name: $"{targetSymbol.Name}Decorator".TrimStart('I'),//Smarter handling
+            Node: ctx.TargetNode,
+            Type: TargetType.Interface);
     }
 
-    private static void RenderDecoratorClassFromInterface(SourceProductionContext ctx, TargetTypeModel model)
+    private static void RenderDecoratorClass(SourceProductionContext ctx, TargetTypeModel model)
     {
-        var className = model.Name.TrimStart('I') + "Decorator";
-        var innerTypeName = $"{model.Namespace}.{model.Name}";
-        var source = SourceText.From($$"""
-           namespace {{Constants.Namespace}} {
-              public abstract class {{className}} : {{innerTypeName}} {
-                private readonly {{innerTypeName}} _inner;
-                protected {{className}}({{innerTypeName}} inner) {
-                    _inner = inner;
-                }
-                {{RenderMembers(model.Members, "     ")}}
-              }
-           }
-           """, Encoding.UTF8);
-        ctx.AddSource(model.Namespace+"."+model.Name+"Decorator", source);
+        switch (model.Type)
+        {
+            case TargetType.Interface:
+                var builder = new InterfaceDecoratorBuilder(model.Name, model.Namespace,
+                    (InterfaceDeclarationSyntax)model.Node);
+                ctx.AddSource(builder.Name, builder.GetSource());
+                break;
+            default: throw new NotSupportedException();
+        }
     }
 
     private static string RenderMembers(TargetTypeMembers model, string prefix)
@@ -89,6 +82,6 @@ public class BaseclassGenerator: IIncrementalGenerator
     private static void GenerateAttribute(IncrementalGeneratorPostInitializationContext ctx)
     {
         var builder = new GenerateDecoratorAttributeBuilder();
-        ctx.AddSource(builder.Name, SourceText.From(builder.Node().ToFullString(), Encoding.UTF8));
+        ctx.AddSource(builder.Name, builder.GetSource());
     }
 }
