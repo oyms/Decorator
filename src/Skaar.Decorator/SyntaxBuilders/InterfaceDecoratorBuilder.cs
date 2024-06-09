@@ -7,27 +7,16 @@ using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Skaar.Decorator.SyntaxBuilders;
 
-class InterfaceDecoratorBuilder : BuilderBase
+class InterfaceDecoratorBuilder(string name, string @namespace, InterfaceDeclarationSyntax targetNode)
+    : BuilderBase
 {
-    private readonly string _name;
-    private readonly string _ns;
-    private readonly InterfaceDeclarationSyntax _targetNode;
-
-
-    public InterfaceDecoratorBuilder(string name, string @namespace, InterfaceDeclarationSyntax targetNode)
-    {
-        _name = name;
-        _ns = @namespace;
-        _targetNode = targetNode;
-    }
-
-    public override string Name => $"{_ns}.{_name}";
+    public override string Name => $"{@namespace}.{name}";
     public override SyntaxNode Node()
     {
         var namespaceDeclaration = SF
-            .NamespaceDeclaration(SF.ParseName(_ns))
+            .NamespaceDeclaration(SF.ParseName(@namespace))
             .NormalizeWhitespace();
-        var classDeclaration = SF.ClassDeclaration(_name)
+        var classDeclaration = SF.ClassDeclaration(name)
             .AddModifiers(Modifiers(SyntaxKind.PublicKeyword,SyntaxKind.AbstractKeyword))
             .AddBaseListTypes(SF.SimpleBaseType(ParseTargetTypeName()))
             .AddAttributeLists(BuildGeneratedCodeAttribute())
@@ -39,7 +28,7 @@ class InterfaceDecoratorBuilder : BuilderBase
     }
 
     private TypeSyntax ParseTargetTypeName() => 
-        SF.ParseTypeName(_targetNode.Identifier.ToString());
+        SF.ParseTypeName(targetNode.Identifier.ToString());
 
     private IEnumerable<MemberDeclarationSyntax> BuildMembers()
     {
@@ -48,7 +37,7 @@ class InterfaceDecoratorBuilder : BuilderBase
             SF.VariableDeclaration(ParseTargetTypeName())
                 .AddVariables(SF.VariableDeclarator(innerField.Identifier)))
             .AddModifiers(Modifiers(SyntaxKind.PrivateKeyword, SyntaxKind.ReadOnlyKeyword));
-        yield return SF.ConstructorDeclaration(_name)
+        yield return SF.ConstructorDeclaration(name)
             .AddModifiers(Modifiers(SyntaxKind.ProtectedKeyword))
             .AddParameterListParameters(
                 SF.Parameter(SF.Identifier("inner"))
@@ -61,7 +50,7 @@ class InterfaceDecoratorBuilder : BuilderBase
                             )
                         )
                     );
-        foreach (var targetMember in _targetNode.Members)
+        foreach (var targetMember in targetNode.Members)
         {
             if (targetMember is MethodDeclarationSyntax targetMethod)
             {
@@ -96,8 +85,17 @@ class InterfaceDecoratorBuilder : BuilderBase
                         .ToArray()
                 );
         }
-        
-        return SF.ExpressionStatement(expression);
+
+        if (IsVoidMethod(targetMethod))
+        {
+            return SF.ExpressionStatement(expression);
+        }
+        return SF.ReturnStatement(expression);
     }
     
+    private bool IsVoidMethod(MethodDeclarationSyntax methodDeclaration)
+    {
+        return methodDeclaration.ReturnType is PredefinedTypeSyntax predefinedType &&
+               predefinedType.Keyword.IsKind(SyntaxKind.VoidKeyword);
+    }
 }

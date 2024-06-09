@@ -53,31 +53,6 @@ public class BaseclassGenerator: IIncrementalGenerator
         }
     }
 
-    private static string RenderMembers(TargetTypeMembers model, string prefix)
-    {
-        var bld = new StringBuilder();
-        foreach (var member in model)
-        {
-
-            if (member is MethodDeclarationSyntax method)
-            {
-                bld.AppendLine(
-                    $"{prefix}public virtual {method.ReturnType} {method.Identifier}{method.ParameterList.ToFullString()} {{");
-                var callInner = $"_inner.{method.Identifier}{method.ParameterList.OpenParenToken}{string.Join(", ", method.ParameterList.Parameters.Select(p => p.Identifier))}{method.ParameterList.CloseParenToken};";
-                if (method.ReturnType.IsNotNull)
-                {
-                    bld.AppendLine($"{prefix}\treturn {callInner}");
-                }
-                else
-                {
-                    bld.AppendLine($"{prefix}\t{callInner}");
-                }
-                bld.AppendLine($"{prefix}}}");
-            }
-        }
-
-        return bld.ToString();
-    }
 
     private static void GenerateAttribute(IncrementalGeneratorPostInitializationContext ctx)
     {

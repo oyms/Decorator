@@ -10,6 +10,7 @@ public class DecoratorAttributeTests
         var target = new DecoratorEksempel0(new Eksempel0());
         target.Method0();
         target.Method1(1, string.Empty, true);
+        Assert.True(target.Method2(""));
     }
 }
 
@@ -39,6 +40,11 @@ class Eksempel0 : IEksempel0
     {
         throw new NotImplementedException();
     }
+
+    public bool Method2(string value)
+    {
+        return true;
+    }
 }
 
 [GenerateDecorator]
@@ -46,5 +52,6 @@ public interface IEksempel0
 {
     void Method0();
     void Method1(int a, string b, bool c);
+    bool Method2(string value);
 }
 
