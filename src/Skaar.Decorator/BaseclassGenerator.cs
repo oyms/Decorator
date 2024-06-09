@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Skaar.Decorator.Models;
+using Skaar.Decorator.SyntaxBuilders;
 
 namespace Skaar.Decorator;
 
@@ -84,30 +85,10 @@ public class BaseclassGenerator: IIncrementalGenerator
 
         return bld.ToString();
     }
-    
+
     private static void GenerateAttribute(IncrementalGeneratorPostInitializationContext ctx)
     {
-        ctx.AddSource(Constants.AttributeName, SourceText.From(
-                $$"""
-                  using System;
-
-                  namespace {{Constants.Namespace}} {
-                      /// <summary>
-                      /// Provides a generated base class to facilitate a decorator
-                      /// <seealso href="https://en.wikipedia.org/wiki/Decorator_pattern" />
-                      /// </summary>
-                      {{GeneratedCodeAttribute()}}
-                      [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
-                      public class GenerateDecoratorAttribute : Attribute
-                      {       
-                      }
-                  }
-                  """, Encoding.UTF8));;
-    }
-
-    private static string GeneratedCodeAttribute()
-    {
-        var assName = Assembly.GetExecutingAssembly().GetName();
-        return $"[System.CodeDom.Compiler.GeneratedCode(\"{assName.Name}\", \"{assName.Version}\")]";
+        var builder = new GenerateDecoratorAttributeBuilder();
+        ctx.AddSource(builder.Name, SourceText.From(builder.Node().ToFullString(), Encoding.UTF8));
     }
 }
