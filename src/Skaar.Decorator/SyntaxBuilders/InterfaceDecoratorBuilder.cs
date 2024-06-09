@@ -54,17 +54,36 @@ class InterfaceDecoratorBuilder(TargetName name, InterfaceDeclarationSyntax targ
                     );
         foreach (var targetMember in targetNode.Members)
         {
-            if (targetMember is MethodDeclarationSyntax targetMethod)
+            switch (targetMember)
             {
-                yield return SF.MethodDeclaration(targetMethod.ReturnType, targetMethod.Identifier)
-                    .AddModifiers(Modifiers(SyntaxKind.PublicKeyword, SyntaxKind.VirtualKeyword))
-                    .AddParameterListParameters(
-                        targetMethod.ParameterList.Parameters.Select(BuildParameter).ToArray()
-                    )
-                    .WithBody(SF.Block(BuildMethodBody(innerField, targetMethod)));
+                case MethodDeclarationSyntax targetMethod:
+                    yield return SF.MethodDeclaration(targetMethod.ReturnType, targetMethod.Identifier)
+                        .AddModifiers(Modifiers(SyntaxKind.PublicKeyword, SyntaxKind.VirtualKeyword))
+                        .AddParameterListParameters(
+                            targetMethod.ParameterList.Parameters.Select(BuildParameter).ToArray()
+                        )
+                        .WithBody(SF.Block(BuildMethodBody(innerField, targetMethod)));
+                    break;
+                case PropertyDeclarationSyntax targetProperty:
+                    var prop = SF.PropertyDeclaration(targetProperty.Type, targetProperty.Identifier)
+                        .AddModifiers(Modifiers(SyntaxKind.PublicKeyword, SyntaxKind.VirtualKeyword))
+                        .AddAccessorListAccessors(
+                            targetProperty
+                                .AccessorList
+                                .Accessors
+                                .Select(a => 
+                                    SF.AccessorDeclaration(a.Kind())
+                                        .WithBody(SF.Block(
+                                    BuildPropertyBody(innerField, a)
+                                    ))).ToArray()
+                            );
+                    yield return prop;
+                    break;
             }
         }
     }
+    
+    
 
     private ParameterSyntax BuildParameter(ParameterSyntax targetParameter)
     {
@@ -77,6 +96,28 @@ class InterfaceDecoratorBuilder(TargetName name, InterfaceDeclarationSyntax targ
         }
 
         return result;
+    }
+
+    private StatementSyntax BuildPropertyBody(IdentifierNameSyntax innerField, AccessorDeclarationSyntax targetAccessor)
+    {
+        var isGet = targetAccessor.IsKind(SyntaxKind.GetAccessorDeclaration);
+        var property = (PropertyDeclarationSyntax) targetAccessor.Parent.Parent;
+        if (isGet)
+        {
+            return SF.ReturnStatement(
+                SF.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    innerField,
+                    SF.IdentifierName(property.Identifier)));
+        }
+        return SF.ExpressionStatement(SF.AssignmentExpression(
+                SyntaxKind.SimpleAssignmentExpression,
+                SF.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    innerField,
+                    SF.IdentifierName(property.Identifier)
+                    ),SF.IdentifierName("value")
+                ));
     }
 
     private StatementSyntax BuildMethodBody(IdentifierNameSyntax innerField, MethodDeclarationSyntax targetMethod)

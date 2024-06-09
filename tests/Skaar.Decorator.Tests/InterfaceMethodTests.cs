@@ -1,13 +1,9 @@
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
-using Newtonsoft.Json;
-
 namespace Skaar.Decorator.Tests;
 
 public class InterfaceMethodTests
 {
     [Fact]
-    public void Test1()
+    public void BasicMethods()
     {
         var target = new DecoratorEksempel0(new Eksempel0());
         target.Method0();
@@ -57,25 +53,4 @@ public class InterfaceMethodTests
     }
 }
 
-[GenerateDecorator]
-public interface UtenBaseklasse
-{
-    
-}
-
-public class A
-{
-    public class B
-    {
-        public class C
-        {
-            [GenerateDecorator]
-            public interface IWhatever
-            {
-                public int Count(out int outvalue, in bool inValue, ref string refValue, params string[] para_mette);
-                public bool TryParse([MinLength(7)]string value,[NotNullWhen(true)] out int? result);
-            }
-        }
-    }
-}
 
