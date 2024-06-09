@@ -3,7 +3,7 @@ namespace Skaar.Decorator.Tests;
 public class InterfacePropertyTests
 {
     [Fact]
-    public void Test1()
+    public void TestProperties()
     {
         var target = new Decorator2(new Eksempel2());
         Assert.NotNull(target.PropertyGetOnly);

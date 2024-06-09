@@ -65,7 +65,7 @@ class InterfaceDecoratorBuilder(TargetName name, InterfaceDeclarationSyntax targ
                         .WithBody(SF.Block(BuildMethodBody(innerField, targetMethod)));
                     break;
                 case PropertyDeclarationSyntax targetProperty:
-                    var prop = SF.PropertyDeclaration(targetProperty.Type, targetProperty.Identifier)
+                    yield return SF.PropertyDeclaration(targetProperty.Type, targetProperty.Identifier)
                         .AddModifiers(Modifiers(SyntaxKind.PublicKeyword, SyntaxKind.VirtualKeyword))
                         .AddAccessorListAccessors(
                             targetProperty
@@ -74,10 +74,27 @@ class InterfaceDecoratorBuilder(TargetName name, InterfaceDeclarationSyntax targ
                                 .Select(a => 
                                     SF.AccessorDeclaration(a.Kind())
                                         .WithBody(SF.Block(
-                                    BuildPropertyBody(innerField, a)
-                                    ))).ToArray()
-                            );
-                    yield return prop;
+                                            BuildPropertyBody(innerField, a)
+                                        ))).ToArray()
+                        );
+                    break;
+                case IndexerDeclarationSyntax targetIndexer:
+                    var index = SF.IndexerDeclaration(targetIndexer.Type)
+                            .WithModifiers(targetIndexer.Modifiers)
+                            .AddModifiers(Modifiers(SyntaxKind.PublicKeyword, SyntaxKind.VirtualKeyword))
+                            .WithParameterList(targetIndexer.ParameterList)
+                            .AddAccessorListAccessors(
+                                targetIndexer
+                                    .AccessorList
+                                    .Accessors
+                                    .Select(a => 
+                                        SF.AccessorDeclaration(a.Kind())
+                                            .WithBody(SF.Block(
+                                                BuildIndexerBody(innerField, a)
+                                                ))).ToArray()
+                                )
+                        ;
+                    yield return index;
                     break;
             }
         }
@@ -101,7 +118,7 @@ class InterfaceDecoratorBuilder(TargetName name, InterfaceDeclarationSyntax targ
     private StatementSyntax BuildPropertyBody(IdentifierNameSyntax innerField, AccessorDeclarationSyntax targetAccessor)
     {
         var isGet = targetAccessor.IsKind(SyntaxKind.GetAccessorDeclaration);
-        var property = (PropertyDeclarationSyntax) targetAccessor.Parent.Parent;
+        var property =  (PropertyDeclarationSyntax) targetAccessor.Parent.Parent;
         if (isGet)
         {
             return SF.ReturnStatement(
@@ -118,6 +135,30 @@ class InterfaceDecoratorBuilder(TargetName name, InterfaceDeclarationSyntax targ
                     SF.IdentifierName(property.Identifier)
                     ),SF.IdentifierName("value")
                 ));
+    }  
+    
+    private StatementSyntax BuildIndexerBody(IdentifierNameSyntax innerField, AccessorDeclarationSyntax targetAccessor)
+    {
+        var isGet = targetAccessor.IsKind(SyntaxKind.GetAccessorDeclaration);
+        var indexer =  (IndexerDeclarationSyntax) targetAccessor.Parent.Parent;
+        var args = indexer
+            .ParameterList
+            .Parameters
+            .Select(p => SF.Argument(SF.IdentifierName(p.Identifier))).ToArray();
+        if (isGet)
+        {
+            return SF.ReturnStatement(
+                SF.ElementAccessExpression(innerField)
+                    .AddArgumentListArguments(args));
+        }
+
+        return SF.ExpressionStatement(
+            SF.AssignmentExpression(
+                SyntaxKind.SimpleAssignmentExpression,
+                SF.ElementAccessExpression(innerField)
+                    .AddArgumentListArguments(args),
+                SF.IdentifierName("value")));
+
     }
 
     private StatementSyntax BuildMethodBody(IdentifierNameSyntax innerField, MethodDeclarationSyntax targetMethod)
