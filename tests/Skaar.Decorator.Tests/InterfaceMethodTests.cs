@@ -11,6 +11,15 @@ public class InterfaceMethodTests
         Assert.True(target.Method2(""));
     }
 
+    [Fact]
+    public async Task AsynMethod()
+    {
+        var target = new DecoratorEksempel0(new Eksempel0());
+        var result = await target.MethodAsync(0);
+        
+        Assert.Equal(5, result);
+    }
+
     class DecoratorEksempel0 : InterfaceMethodTests_Eksempel0Decorator
     {
         public DecoratorEksempel0(IEksempel0 inner) : base(inner)
@@ -23,6 +32,11 @@ public class InterfaceMethodTests
 
         public override void Method1(int a, string b, bool c)
         {
+        }
+
+        public override async Task<double> MethodAsync(uint a)
+        {
+            return await Task.FromResult(5);
         }
     }
 
@@ -42,6 +56,9 @@ public class InterfaceMethodTests
         {
             return true;
         }
+
+        public Task<double> MethodAsync(uint a) => 
+            Task.FromException<double>(new Exception("Disaster!"));
     }
 
     [GenerateDecorator]
@@ -50,6 +67,7 @@ public class InterfaceMethodTests
         void Method0();
         void Method1(int a, string b, bool c);
         bool Method2(string value);
+        Task<double> MethodAsync(uint a);
     }
 }
 

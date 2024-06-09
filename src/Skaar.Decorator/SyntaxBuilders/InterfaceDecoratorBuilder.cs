@@ -79,22 +79,32 @@ class InterfaceDecoratorBuilder(TargetName name, InterfaceDeclarationSyntax targ
                         );
                     break;
                 case IndexerDeclarationSyntax targetIndexer:
-                    var index = SF.IndexerDeclaration(targetIndexer.Type)
-                            .WithModifiers(targetIndexer.Modifiers)
-                            .AddModifiers(Modifiers(SyntaxKind.PublicKeyword, SyntaxKind.VirtualKeyword))
-                            .WithParameterList(targetIndexer.ParameterList)
-                            .AddAccessorListAccessors(
-                                targetIndexer
-                                    .AccessorList
-                                    .Accessors
-                                    .Select(a => 
-                                        SF.AccessorDeclaration(a.Kind())
-                                            .WithBody(SF.Block(
-                                                BuildIndexerBody(innerField, a)
-                                                ))).ToArray()
-                                )
-                        ;
-                    yield return index;
+                    yield return SF.IndexerDeclaration(targetIndexer.Type)
+                        .WithModifiers(targetIndexer.Modifiers)
+                        .AddModifiers(Modifiers(SyntaxKind.PublicKeyword, SyntaxKind.VirtualKeyword))
+                        .WithParameterList(targetIndexer.ParameterList)
+                        .AddAccessorListAccessors(
+                            targetIndexer
+                                .AccessorList
+                                .Accessors
+                                .Select(a => 
+                                    SF.AccessorDeclaration(a.Kind())
+                                        .WithBody(SF.Block(
+                                            BuildIndexerBody(innerField, a)
+                                        ))).ToArray()
+                        );
+                    break;
+                case EventFieldDeclarationSyntax targetEventField:
+                    var id = targetEventField.Declaration.Variables.First().Identifier;
+                    yield return SF.EventDeclaration(targetEventField.Declaration.Type, id)
+                        .WithModifiers(targetEventField.Modifiers)
+                        .AddModifiers(Modifiers(SyntaxKind.PublicKeyword, SyntaxKind.VirtualKeyword))
+                        .AddAccessorListAccessors(
+                            SF.AccessorDeclaration(SyntaxKind.AddAccessorDeclaration)
+                                .WithBody(SF.Block(BuildEventFieldBody(innerField, id, true))),
+                            SF.AccessorDeclaration(SyntaxKind.RemoveAccessorDeclaration)
+                                .WithBody(SF.Block(BuildEventFieldBody(innerField, id, false)))
+                        );
                     break;
             }
         }
@@ -113,6 +123,19 @@ class InterfaceDecoratorBuilder(TargetName name, InterfaceDeclarationSyntax targ
         }
 
         return result;
+    }
+
+    private StatementSyntax BuildEventFieldBody(IdentifierNameSyntax innerField, SyntaxToken identifier, bool isAdd)
+    {
+        var kind = isAdd ? SyntaxKind.AddAssignmentExpression : SyntaxKind.SubtractAssignmentExpression;
+        return SF.ExpressionStatement(
+            SF.AssignmentExpression(
+                kind,
+                SyntaxFactory.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    innerField,
+                    SF.IdentifierName(identifier)),
+                SF.IdentifierName("value")));
     }
 
     private StatementSyntax BuildPropertyBody(IdentifierNameSyntax innerField, AccessorDeclarationSyntax targetAccessor)
