@@ -52,7 +52,7 @@ public class Decorators: GeneratorBase
                     __Inner = inner;
                 }
                 
-                {{string.Join("", methods)}}
+                {{string.Join("\n", methods)}}
             }
             """;
     }
@@ -60,14 +60,46 @@ public class Decorators: GeneratorBase
     private string GetMethodSource(IMethodSymbol methodSymbol)
     {
         var returnKeyword = methodSymbol.ReturnsVoid ? "" : "return ";
+        var genericParameters = methodSymbol.IsGenericMethod ? 
+            $"<{string.Join(", ", methodSymbol.TypeParameters.Select(t => t.Name))}>" : 
+            "";
+        var genericConstraints = methodSymbol.IsGenericMethod
+            ? " " + string.Join(" ", methodSymbol.TypeParameters.Select(BuildConstraintClause))
+            : "";
         return
             $$"""
                   
                   ///<inheritdoc/>
-                  public virtual {{methodSymbol.ReturnType}} {{methodSymbol.Name}}({{string.Join(", ", methodSymbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}})
+                  public virtual {{methodSymbol.ReturnType}} {{methodSymbol.Name}}{{genericParameters}}({{string.Join(", ", methodSymbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}}){{genericConstraints}}
                   {
-                      {{returnKeyword}}__Inner.{{methodSymbol.Name}}({{string.Join(", ", methodSymbol.Parameters.Select(p => p.Name))}});   
+                      {{returnKeyword}}__Inner.{{methodSymbol.Name}}{{genericParameters}}({{string.Join(", ", methodSymbol.Parameters.Select(p => p.Name))}});   
                   }     
               """;
+    }
+    
+    private string BuildConstraintClause(ITypeParameterSymbol tp)
+    {
+        var parts = new System.Collections.Generic.List<string>();
+
+        // class / struct / unmanaged / notnull
+        if (tp.HasReferenceTypeConstraint)
+        {
+            var ann = tp.ReferenceTypeConstraintNullableAnnotation == NullableAnnotation.Annotated ? "class?" : "class";
+            parts.Add(ann);
+        }
+        if (tp.HasValueTypeConstraint) parts.Add("struct");
+        if (tp.HasUnmanagedTypeConstraint) parts.Add("unmanaged");
+        if (tp.HasNotNullConstraint) parts.Add("notnull");
+
+        // type constraints
+        if (tp.ConstraintTypes.Length > 0)
+        {
+            parts.AddRange(tp.ConstraintTypes.Select(t => t.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+        }
+
+        // new()
+        if (tp.HasConstructorConstraint) parts.Add("new()");
+
+        return parts.Count == 0 ? "" : $"where {tp.Name} : {string.Join(", ", parts)}";
     }
 }
