@@ -45,6 +45,56 @@ public class GeneratorTests
         target.GenericMethod<object, string>(expected).ShouldBeTrue();
         
         inner.Received().GenericMethod<object, string>(expected);
+    }    
+    
+    [Fact]
+    public void WithProperty_GetterAndSetter_CallsInnerMethod()
+    {
+        var expected = 42d;
+        var inner = Substitute.For<GeneratorTests_Interface0>();
+        var target = new TestTarget0(inner);
+        inner.Property0.Returns(expected);
+        
+        target.Property0.ShouldBe(expected);
+        target.Property0 = expected + 1;
+        
+        inner.Received().Property0 = expected + 1;
+    }    
+    
+    [Fact]
+    public void WithProperty_GetterOnly_CallsInnerMethod()
+    {
+        var expected = true;
+        var inner = Substitute.For<GeneratorTests_Interface0>();
+        var target = new TestTarget0(inner);
+        inner.Property1.Returns(expected);
+        
+        target.Property1.ShouldBe(expected);
+    }   
+    
+    [Fact]
+    public void WithProperty_SetterOnly_CallsInnerMethod()
+    {
+        var expected = new byte[]{1,2,3};
+        var inner = Substitute.For<GeneratorTests_Interface0>();
+        var target = new TestTarget0(inner);
+        
+        target.Property2 = expected;
+        
+        inner.Received().Property2 = expected;   
+    }    
+    [Fact]
+    public void WithProperty_Indexer_CallsInnerMethod()
+    {
+        var expected = "Some string";
+        var inner = Substitute.For<GeneratorTests_Interface0>();
+        var target = new TestTarget0(inner);
+        inner[1, true].Returns(expected);
+        
+        target[1, true].ShouldBe(expected);
+        target[2, true] = expected;
+        
+        inner.Received()[2, true] = expected;   
     }
 }
 
@@ -71,10 +121,13 @@ public interface GeneratorTests_Interface0
     /// A generic method
     /// </summary>
     bool GenericMethod<T, TT>(T someValue) where T :  class, new() where TT : class;
+    
+    double Property0 { get; set; }
+    bool Property1 { get; }
+    byte[] Property2 { set; }
+    
+    string this[int i, bool x] { get; set; }
 }
 
-// TODO: Properties
-// TODO: Fields
-// TODO: Indexer
 // TODO: events
 // TODO Generic interfaces

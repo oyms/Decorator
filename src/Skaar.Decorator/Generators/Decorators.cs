@@ -35,8 +35,15 @@ public class Decorators: GeneratorBase
             .Select(m => m.MethodKind switch
             {
                 MethodKind.Ordinary => GetMethodSource(m),
+                MethodKind.PropertyGet => null,
+                MethodKind.PropertySet => null,
                 _ => $"// Not implemented {m.Name}\n"
-            });
+            })
+            .Where(s => s != null)
+            .Select(s => s!);
+        var properties = classParams.TargetType.GetMembers()
+            .OfType<IPropertySymbol>()
+            .Select(GetPropertySource);
         return 
             $$"""
             #nullable enable
@@ -52,9 +59,74 @@ public class Decorators: GeneratorBase
                     __Inner = inner;
                 }
                 
+                {{string.Join("\n", properties)}}
                 {{string.Join("\n", methods)}}
             }
             """;
+    }
+
+    private string GetPropertySource(IPropertySymbol propertySymbol)
+    {
+        if (propertySymbol.IsIndexer)
+        {
+            var parameters = propertySymbol.Parameters;
+            var parameterList = string.Join(", ", parameters.Select(p => p.Name));
+            var getter = propertySymbol.IsWriteOnly
+                ? string.Empty
+                : $$"""
+                        
+                            get 
+                            {
+                                return __Inner[{{parameterList}}];
+                            }
+                    """;
+            var setter = propertySymbol.IsReadOnly
+                ? string.Empty
+                : $$"""
+                    set
+                            {
+                                __Inner[{{parameterList}}] = value;
+                            }
+                    """;
+            return
+                $$"""
+                        /// <inheritdoc/>
+                        public virtual {{propertySymbol.Type.ToDisplayString()}} this[{{string.Join(", ", parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"))}}]
+                        {
+                            {{getter}}
+                            {{setter}}
+                        }
+                  """;
+        }
+        else
+        {
+            var getter = propertySymbol.IsWriteOnly
+                ? string.Empty
+                : $$"""
+                        
+                            get 
+                            {
+                                return __Inner.{{propertySymbol.Name}};
+                            }
+                    """;
+            var setter = propertySymbol.IsReadOnly
+                ? string.Empty
+                : $$"""
+                     set
+                            {
+                                __Inner.{{propertySymbol.Name}}= value;
+                            }
+                    """;
+            return
+                $$"""
+                      /// <inheritdoc/>
+                      public virtual {{propertySymbol.Type.ToDisplayString()}} {{propertySymbol.Name}} 
+                      {
+                         {{getter}}
+                         {{setter}}
+                      }   
+                  """;
+        }
     }
 
     private string GetMethodSource(IMethodSymbol methodSymbol)
@@ -69,7 +141,7 @@ public class Decorators: GeneratorBase
         return
             $$"""
                   
-                  ///<inheritdoc/>
+                  /// <inheritdoc/>
                   public virtual {{methodSymbol.ReturnType}} {{methodSymbol.Name}}{{genericParameters}}({{string.Join(", ", methodSymbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}}){{genericConstraints}}
                   {
                       {{returnKeyword}}__Inner.{{methodSymbol.Name}}{{genericParameters}}({{string.Join(", ", methodSymbol.Parameters.Select(p => p.Name))}});   
