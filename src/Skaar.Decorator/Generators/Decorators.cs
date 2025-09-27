@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 namespace Skaar.Decorator.Generators;
@@ -28,10 +29,21 @@ public class Decorators: GeneratorBase
 
     private string GetClassSource(DecoratorClassParameters classParams)
     {
-        var innerPropertyName = GetSafePropertyName("Inner",  classParams.TargetType.GetMembers());
-        var visibility = classParams.TargetType.DeclaredAccessibility.ToString().ToLower();
-        var baseTypeName = classParams.TargetType.ToDisplayString();
-        var methods = classParams.TargetType.GetMembers()
+        var targetType = classParams.TargetType;
+        var innerPropertyName = GetSafePropertyName("Inner",  targetType.GetMembers());
+        var visibility = targetType.DeclaredAccessibility.ToString().ToLower();
+        var baseTypeName = targetType.ToDisplayString();
+        var isGeneric = targetType.IsGenericType &&
+                        (targetType.IsUnboundGenericType ||
+                         targetType.TypeArguments.Any(a => a.TypeKind == TypeKind.TypeParameter)
+                        );
+        var genericParameters = isGeneric ? 
+            $"<{string.Join(", ", targetType.TypeParameters.Select(t => t.Name))}>" :
+            string.Empty;
+        var genericConstraints = isGeneric ?
+        " " + string.Join(" ", targetType.TypeParameters.Select(BuildConstraintClause)) :
+        string.Empty;
+        var methods = targetType.GetMembers()
             .OfType<IMethodSymbol>()
             .Select(m => m.MethodKind switch
             {
@@ -44,10 +56,10 @@ public class Decorators: GeneratorBase
             })
             .Where(s => s != null)
             .Select(s => s!);
-        var properties = classParams.TargetType.GetMembers()
+        var properties = targetType.GetMembers()
             .OfType<IPropertySymbol>()
             .Select(x => GetPropertySource(x, innerPropertyName));
-        var events = classParams.TargetType.GetMembers()
+        var events = targetType.GetMembers()
             .OfType<IEventSymbol>()
             .Select(x => GetEventSource(x, innerPropertyName));
         return 
@@ -57,7 +69,7 @@ public class Decorators: GeneratorBase
             namespace {{classParams.Namespace}};               
                           
             {{GeneratedCodeAttribute}}
-            {{visibility}} abstract class {{classParams.ClassName}} : {{baseTypeName}}
+            {{visibility}} abstract class {{classParams.ClassName}}{{genericParameters}} : {{baseTypeName}}{{genericConstraints}}
             {
                 protected {{baseTypeName}} {{innerPropertyName}} { get; }
                 protected {{classParams.ClassName}}({{baseTypeName}} inner)

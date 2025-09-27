@@ -6,6 +6,14 @@ using Skaar.Decorator.Tests.Interfaces;
     Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface0>(
         ClassName = nameof(GeneratorTests_Interface0_DecoratorBase),
         Namespace = "Skaar.Decorator.Tests.Interfaces")]
+[assembly:
+    Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface1<int, string>>(
+        ClassName = nameof(GeneratorTests_Interface1_DecoratorBase),
+        Namespace = "Skaar.Decorator.Tests.Interfaces")]
+[assembly:
+    Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface1<>>(
+        ClassName = "GeneratorTests_Interface1b_DecoratorBase",
+        Namespace = "Skaar.Decorator.Tests.Interfaces")]
 
 namespace Skaar.Decorator.Tests.Interfaces;
 
@@ -98,12 +106,11 @@ public class GeneratorTests
     }
 }
 
-file class TestTarget0 : Skaar.Decorator.Tests.Interfaces.GeneratorTests_Interface0_DecoratorBase
-{
-    public TestTarget0(GeneratorTests_Interface0 inner) : base(inner)
-    {
-    }
-}
+file class TestTarget0(GeneratorTests_Interface0 inner)
+    : Skaar.Decorator.Tests.Interfaces.GeneratorTests_Interface0_DecoratorBase(inner);
+
+file class TestTarget1(GeneratorTests_Interface1<int, string> inner)
+    : Skaar.Decorator.Tests.Interfaces.GeneratorTests_Interface1_DecoratorBase(inner);
 
 
 public interface GeneratorTests_Interface0
@@ -133,4 +140,7 @@ public interface GeneratorTests_Interface0
     int Inner { set; }
 }
 
-// TODO Generic interfaces
+public interface GeneratorTests_Interface1<T, TT> where T: struct
+{
+    T Method(TT value);
+}
