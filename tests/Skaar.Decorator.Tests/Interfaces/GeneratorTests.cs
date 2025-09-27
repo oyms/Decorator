@@ -127,7 +127,10 @@ public interface GeneratorTests_Interface0
     byte[] Property2 { set; }
     
     string this[int i, bool x] { get; set; }
+
+    event EventHandler<EventArgs> SomeEvent;
+    
+    int Inner { set; }
 }
 
-// TODO: events
 // TODO Generic interfaces

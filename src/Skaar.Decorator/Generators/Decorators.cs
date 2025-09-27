@@ -28,22 +28,28 @@ public class Decorators: GeneratorBase
 
     private string GetClassSource(DecoratorClassParameters classParams)
     {
+        var innerPropertyName = GetSafePropertyName("Inner",  classParams.TargetType.GetMembers());
         var visibility = classParams.TargetType.DeclaredAccessibility.ToString().ToLower();
         var baseTypeName = classParams.TargetType.ToDisplayString();
         var methods = classParams.TargetType.GetMembers()
             .OfType<IMethodSymbol>()
             .Select(m => m.MethodKind switch
             {
-                MethodKind.Ordinary => GetMethodSource(m),
+                MethodKind.Ordinary => GetMethodSource(m, innerPropertyName),
                 MethodKind.PropertyGet => null,
                 MethodKind.PropertySet => null,
+                MethodKind.EventAdd  => null,
+                MethodKind.EventRemove => null,
                 _ => $"// Not implemented {m.Name}\n"
             })
             .Where(s => s != null)
             .Select(s => s!);
         var properties = classParams.TargetType.GetMembers()
             .OfType<IPropertySymbol>()
-            .Select(GetPropertySource);
+            .Select(x => GetPropertySource(x, innerPropertyName));
+        var events = classParams.TargetType.GetMembers()
+            .OfType<IEventSymbol>()
+            .Select(x => GetEventSource(x, innerPropertyName));
         return 
             $$"""
             #nullable enable
@@ -53,45 +59,65 @@ public class Decorators: GeneratorBase
             {{GeneratedCodeAttribute}}
             {{visibility}} abstract class {{classParams.ClassName}} : {{baseTypeName}}
             {
-                protected {{baseTypeName}} __Inner { get; }
+                protected {{baseTypeName}} {{innerPropertyName}} { get; }
                 protected {{classParams.ClassName}}({{baseTypeName}} inner)
                 {
-                    __Inner = inner;
+                    {{innerPropertyName}} = inner;
                 }
                 
                 {{string.Join("\n", properties)}}
                 {{string.Join("\n", methods)}}
+                {{string.Join("\n", events)}}
             }
             """;
     }
 
-    private string GetPropertySource(IPropertySymbol propertySymbol)
+    private string GetSafePropertyName(string suggestion, ImmutableArray<ISymbol> symbols)
     {
-        if (propertySymbol.IsIndexer)
+        if (symbols.Any(s => s.Name == suggestion)) return GetSafePropertyName("_" + suggestion, symbols);
+        return suggestion;
+    }
+
+    private string GetEventSource(IEventSymbol symbol, string innerPropertyName)
+    {
+        return
+            $$"""
+              /// <inheritdoc/>
+              public virtual event {{symbol.Type.ToDisplayString()}} {{symbol.Name}}
+                  {
+                    add => {{innerPropertyName}}.{{symbol.Name}} += value;
+                    remove => {{innerPropertyName}}.{{symbol.Name}} -= value;
+                  }
+              """;
+    }
+
+    private string GetPropertySource(IPropertySymbol symbol, string innerPropertyName)
+    {
+        if (symbol.IsIndexer)
         {
-            var parameters = propertySymbol.Parameters;
+            var parameters = symbol.Parameters;
             var parameterList = string.Join(", ", parameters.Select(p => p.Name));
-            var getter = propertySymbol.IsWriteOnly
+            var getter = symbol.IsWriteOnly
                 ? string.Empty
                 : $$"""
                         
                             get 
                             {
-                                return __Inner[{{parameterList}}];
+                                return {{innerPropertyName}}[{{parameterList}}];
                             }
                     """;
-            var setter = propertySymbol.IsReadOnly
+            var setter = symbol.IsReadOnly
                 ? string.Empty
                 : $$"""
                     set
                             {
-                                __Inner[{{parameterList}}] = value;
+                                {{innerPropertyName}}[{{parameterList}}] = value;
                             }
                     """;
             return
                 $$"""
                         /// <inheritdoc/>
-                        public virtual {{propertySymbol.Type.ToDisplayString()}} this[{{string.Join(", ", parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"))}}]
+                        public virtual {{symbol.Type.ToDisplayString()}} this[{{string.Join(", ", parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"))}}]
                         {
                             {{getter}}
                             {{setter}}
@@ -100,27 +126,27 @@ public class Decorators: GeneratorBase
         }
         else
         {
-            var getter = propertySymbol.IsWriteOnly
+            var getter = symbol.IsWriteOnly
                 ? string.Empty
                 : $$"""
                         
                             get 
                             {
-                                return __Inner.{{propertySymbol.Name}};
+                                return {{innerPropertyName}}.{{symbol.Name}};
                             }
                     """;
-            var setter = propertySymbol.IsReadOnly
+            var setter = symbol.IsReadOnly
                 ? string.Empty
                 : $$"""
                      set
                             {
-                                __Inner.{{propertySymbol.Name}}= value;
+                                {{innerPropertyName}}.{{symbol.Name}}= value;
                             }
                     """;
             return
                 $$"""
                       /// <inheritdoc/>
-                      public virtual {{propertySymbol.Type.ToDisplayString()}} {{propertySymbol.Name}} 
+                      public virtual {{symbol.Type.ToDisplayString()}} {{symbol.Name}} 
                       {
                          {{getter}}
                          {{setter}}
@@ -129,22 +155,22 @@ public class Decorators: GeneratorBase
         }
     }
 
-    private string GetMethodSource(IMethodSymbol methodSymbol)
+    private string GetMethodSource(IMethodSymbol symbol, string innerPropertyName)
     {
-        var returnKeyword = methodSymbol.ReturnsVoid ? "" : "return ";
-        var genericParameters = methodSymbol.IsGenericMethod ? 
-            $"<{string.Join(", ", methodSymbol.TypeParameters.Select(t => t.Name))}>" : 
+        var returnKeyword = symbol.ReturnsVoid ? "" : "return ";
+        var genericParameters = symbol.IsGenericMethod ? 
+            $"<{string.Join(", ", symbol.TypeParameters.Select(t => t.Name))}>" : 
             "";
-        var genericConstraints = methodSymbol.IsGenericMethod
-            ? " " + string.Join(" ", methodSymbol.TypeParameters.Select(BuildConstraintClause))
+        var genericConstraints = symbol.IsGenericMethod
+            ? " " + string.Join(" ", symbol.TypeParameters.Select(BuildConstraintClause))
             : "";
         return
             $$"""
                   
                   /// <inheritdoc/>
-                  public virtual {{methodSymbol.ReturnType}} {{methodSymbol.Name}}{{genericParameters}}({{string.Join(", ", methodSymbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}}){{genericConstraints}}
+                  public virtual {{symbol.ReturnType}} {{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}}){{genericConstraints}}
                   {
-                      {{returnKeyword}}__Inner.{{methodSymbol.Name}}{{genericParameters}}({{string.Join(", ", methodSymbol.Parameters.Select(p => p.Name))}});   
+                      {{returnKeyword}}{{innerPropertyName}}.{{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => p.Name))}});   
                   }     
               """;
     }
