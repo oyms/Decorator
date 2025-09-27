@@ -111,7 +111,7 @@ file class TestTarget0(GeneratorTests_Interface0 inner)
 
 file class TestTarget1(GeneratorTests_Interface1<int, string> inner)
     : Skaar.Decorator.Tests.Interfaces.GeneratorTests_Interface1_DecoratorBase(inner);
-
+ 
 
 public interface GeneratorTests_Interface0
 {

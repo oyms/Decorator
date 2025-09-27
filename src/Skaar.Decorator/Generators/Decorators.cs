@@ -3,12 +3,11 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 namespace Skaar.Decorator.Generators;
 
-public class Decorators: GeneratorBase
+public class Decorators(string toolNamespace): GeneratorBase
 {
     public void Generate(IncrementalGeneratorInitializationContext context, IncrementalValueProvider<ImmutableArray<DecoratorClassParameters>> result)
     {
@@ -31,6 +30,7 @@ public class Decorators: GeneratorBase
     {
         var targetType = classParams.TargetType;
         var innerPropertyName = GetSafePropertyName("Inner",  targetType.GetMembers());
+        var decoratorInterfaceName = $"{toolNamespace}.{Interfaces.InterfaceName}<{targetType.ToDisplayString()}>";
         var visibility = targetType.DeclaredAccessibility.ToString().ToLower();
         var baseTypeName = targetType.ToDisplayString();
         var isGeneric = targetType.IsGenericType &&
@@ -69,9 +69,10 @@ public class Decorators: GeneratorBase
             namespace {{classParams.Namespace}};               
                           
             {{GeneratedCodeAttribute}}
-            {{visibility}} abstract class {{classParams.ClassName}}{{genericParameters}} : {{baseTypeName}}{{genericConstraints}}
+            {{visibility}} abstract class {{classParams.ClassName}}{{genericParameters}} : {{baseTypeName}}, {{decoratorInterfaceName}}{{genericConstraints}}
             {
                 protected {{baseTypeName}} {{innerPropertyName}} { get; }
+                {{baseTypeName}} {{decoratorInterfaceName}}.{{Interfaces.PropertyName}} => {{innerPropertyName}};
                 protected {{classParams.ClassName}}({{baseTypeName}} inner)
                 {
                     {{innerPropertyName}} = inner;

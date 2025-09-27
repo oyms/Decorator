@@ -11,9 +11,11 @@ public class Generator : IIncrementalGenerator
     {
         var @namespace = GetType().Namespace!;
         var attr = new Attributes(@namespace);
-        var decorators = new Decorators();
+        var decorators = new Decorators(@namespace);
+        var interfaces = new Interfaces(@namespace);
         
         attr.Generate(context);
+        interfaces.Generate(context);
         
         GenerateDecoratorClasses(context, attr, decorators);
     }
