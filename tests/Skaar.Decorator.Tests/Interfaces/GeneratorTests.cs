@@ -21,6 +21,18 @@ public class GeneratorTests
         
         target.Method().ShouldBe(expected);
     }
+    
+    [Fact]
+    public void WithVoidMethod_CallsInnerMethod()
+    {
+        const string expected = "Some string";
+        var inner = Substitute.For<GeneratorTests_Interface0>();
+        var target = new TestTarget0(inner);
+        
+        target.OtherMethod(expected);
+        
+        inner.Received().OtherMethod(expected);
+    }
 }
 
 file class TestTarget0 : Skaar.Decorator.Tests.Interfaces.GeneratorTests_Interface0_DecoratorBase
@@ -30,12 +42,18 @@ file class TestTarget0 : Skaar.Decorator.Tests.Interfaces.GeneratorTests_Interfa
     }
 }
 
-interface GeneratorTests_Interface0
+public interface GeneratorTests_Interface0
 {
+    /// <summary>
+    /// Method with return value
+    /// </summary>
     string Method();
+    /// <summary>
+    /// A void method
+    /// </summary>
+    void OtherMethod(string input);
 }
 
-// TODO: Methods
 // TODO: Properties
 // TODO: Fields
 // TODO: events

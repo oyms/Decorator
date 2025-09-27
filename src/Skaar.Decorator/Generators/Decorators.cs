@@ -59,12 +59,14 @@ public class Decorators: GeneratorBase
 
     private string GetMethodSource(IMethodSymbol methodSymbol)
     {
+        var returnKeyword = methodSymbol.ReturnsVoid ? "" : "return ";
         return
             $$"""
                   
+                  ///<inheritdoc/>
                   public virtual {{methodSymbol.ReturnType}} {{methodSymbol.Name}}({{string.Join(", ", methodSymbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}})
                   {
-                      return __Inner.{{methodSymbol.Name}}({{string.Join(", ", methodSymbol.Parameters.Select(p => p.Name))}});   
+                      {{returnKeyword}}__Inner.{{methodSymbol.Name}}({{string.Join(", ", methodSymbol.Parameters.Select(p => p.Name))}});   
                   }     
               """;
     }
