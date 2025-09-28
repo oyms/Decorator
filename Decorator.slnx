@@ -2,6 +2,7 @@
   <Folder Name="/SolutionItems/">
     <File Path="src\CommonProps.targets" />
     <File Path="README.md" />
+    <File Path="LICENSE" />
   </Folder>
   <Project Path="src\Skaar.Decorator\Skaar.Decorator.csproj" Type="Classic C#" />
   <Project Path="tests\Skaar.Decorator.Tests\Skaar.Decorator.Tests.csproj" Type="Classic C#" />

@@ -6,6 +6,8 @@
         <OutputType>Exe</OutputType>
         <RootNamespace>Skaar.Decorator.Tests</RootNamespace>
         <TargetFramework>net9.0</TargetFramework>
+        <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     </PropertyGroup>
 
     <ItemGroup>
