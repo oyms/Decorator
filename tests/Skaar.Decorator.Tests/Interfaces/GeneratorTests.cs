@@ -10,10 +10,10 @@ using Skaar.Decorator.Tests.Interfaces;
     Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface1<int, string>>(
         ClassName = nameof(GeneratorTests_Interface1_DecoratorBase),
         Namespace = "Skaar.Decorator.Tests.Interfaces")]
-[assembly:
-    Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface1<>>(
-        ClassName = "GeneratorTests_Interface1b_DecoratorBase",
-        Namespace = "Skaar.Decorator.Tests.Interfaces")]
+// [assembly:
+//     Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface1<>>(
+//         ClassName = "GeneratorTests_Interface1b_DecoratorBase",
+//         Namespace = "Skaar.Decorator.Tests.Interfaces")]
 
 namespace Skaar.Decorator.Tests.Interfaces;
 
