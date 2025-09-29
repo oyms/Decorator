@@ -14,6 +14,10 @@ using Skaar.Decorator.Tests.Interfaces;
 //     Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface1<>>(
 //         ClassName = "GeneratorTests_Interface1b_DecoratorBase",
 //         Namespace = "Skaar.Decorator.Tests.Interfaces")]
+[assembly:
+    Skaar.Decorator.GenerateDecorator(typeof(GeneratorTests_Interface_StaticMethods),
+        ClassName = "GeneratorTests_Interface_StaticMethodsDecoratorBase",
+        Namespace = "Skaar.Decorator.Tests.Interfaces")]
 
 namespace Skaar.Decorator.Tests.Interfaces;
 
@@ -143,4 +147,12 @@ public interface GeneratorTests_Interface0
 public interface GeneratorTests_Interface1<T, TT> where T: struct
 {
     T Method(TT value);
+}
+
+public interface GeneratorTests_Interface_StaticMethods
+{
+    //static abstract void StaticMethod0();
+    //static abstract int StaticMethod1();
+    //static abstract string StaticMethod2(int value);
+    //static abstract string StaticProperty { get; }
 }

@@ -30,9 +30,13 @@ public class Decorators(string toolNamespace): GeneratorBase
     {
         var targetType = classParams.TargetType;
         var innerPropertyName = GetSafePropertyName("Inner",  targetType.GetMembers());
-        var decoratorInterfaceName = $"{toolNamespace}.{Interfaces.InterfaceName}<{targetType.ToDisplayString()}>";
-        var visibility = targetType.DeclaredAccessibility.ToString().ToLower();
         var baseTypeName = targetType.ToDisplayString();
+        var targetTypeCanBeUsedAsGenericArgument =
+            !(targetType.TypeKind == TypeKind.Interface &&
+              targetType.GetMembers().Any(m => m.IsStatic && m.IsAbstract));
+        var decoratorTypeArgument = targetTypeCanBeUsedAsGenericArgument ? baseTypeName : "object";
+        var decoratorInterfaceName = $"{toolNamespace}.{Interfaces.InterfaceName}<{decoratorTypeArgument}>";
+        var visibility = targetType.DeclaredAccessibility.ToString().ToLower();
         var isGeneric = targetType.IsGenericType &&
                         (targetType.IsUnboundGenericType ||
                          targetType.TypeArguments.Any(a => a.TypeKind == TypeKind.TypeParameter)
@@ -47,7 +51,7 @@ public class Decorators(string toolNamespace): GeneratorBase
             .OfType<IMethodSymbol>()
             .Select(m => m.MethodKind switch
             {
-                MethodKind.Ordinary => GetMethodSource(m, innerPropertyName),
+                MethodKind.Ordinary => GetMethodSource(m, innerPropertyName, baseTypeName),
                 MethodKind.PropertyGet => null,
                 MethodKind.PropertySet => null,
                 MethodKind.EventAdd  => null,
@@ -72,7 +76,7 @@ public class Decorators(string toolNamespace): GeneratorBase
             {{visibility}} abstract class {{classParams.ClassName}}{{genericParameters}} : {{baseTypeName}}, {{decoratorInterfaceName}}{{genericConstraints}}
             {
                 protected {{baseTypeName}} {{innerPropertyName}} { get; }
-                {{baseTypeName}} {{decoratorInterfaceName}}.{{Interfaces.PropertyName}} => {{innerPropertyName}};
+                {{decoratorTypeArgument}} {{decoratorInterfaceName}}.{{Interfaces.PropertyName}} => {{innerPropertyName}};
                 protected {{classParams.ClassName}}({{baseTypeName}} inner)
                 {
                     {{innerPropertyName}} = inner;
@@ -168,7 +172,7 @@ public class Decorators(string toolNamespace): GeneratorBase
         }
     }
 
-    private string GetMethodSource(IMethodSymbol symbol, string innerPropertyName)
+    private string GetMethodSource(IMethodSymbol symbol, string innerPropertyName, string innerTypeName)
     {
         var returnKeyword = symbol.ReturnsVoid ? "" : "return ";
         var genericParameters = symbol.IsGenericMethod ? 
@@ -177,15 +181,30 @@ public class Decorators(string toolNamespace): GeneratorBase
         var genericConstraints = symbol.IsGenericMethod
             ? " " + string.Join(" ", symbol.TypeParameters.Select(BuildConstraintClause))
             : "";
-        return
-            $$"""
-                  
-                  /// <inheritdoc/>
-                  public virtual {{symbol.ReturnType}} {{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}}){{genericConstraints}}
-                  {
-                      {{returnKeyword}}{{innerPropertyName}}.{{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => p.Name))}});   
-                  }     
-              """;
+        if (symbol.IsStatic)
+        {
+            return
+                $$"""
+                      
+                      /// <inheritdoc/>
+                      static {{symbol.ReturnType}} {{innerTypeName}}.{{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}}){{genericConstraints}}
+                      {
+                          throw new NotImplementedException();   
+                      }     
+                  """;
+        }
+        else
+        {
+            return
+                $$"""
+                      
+                      /// <inheritdoc/>
+                      public virtual {{symbol.ReturnType}} {{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}}){{genericConstraints}}
+                      {
+                          {{returnKeyword}}{{innerPropertyName}}.{{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => p.Name))}});   
+                      }     
+                  """;
+        }
     }
     
     private string BuildConstraintClause(ITypeParameterSymbol tp)
