@@ -51,7 +51,7 @@ public class Decorators(string toolNamespace): GeneratorBase
             .OfType<IMethodSymbol>()
             .Select(m => m.MethodKind switch
             {
-                MethodKind.Ordinary => GetMethodSource(m, innerPropertyName, baseTypeName),
+                MethodKind.Ordinary => GetMethodSource(m, innerPropertyName, baseTypeName, classParams.ClassName),
                 MethodKind.PropertyGet => null,
                 MethodKind.PropertySet => null,
                 MethodKind.EventAdd  => null,
@@ -62,7 +62,7 @@ public class Decorators(string toolNamespace): GeneratorBase
             .Select(s => s!);
         var properties = targetType.GetMembers()
             .OfType<IPropertySymbol>()
-            .Select(x => GetPropertySource(x, innerPropertyName));
+            .Select(x => GetPropertySource(x, innerPropertyName, baseTypeName));
         var events = targetType.GetMembers()
             .OfType<IEventSymbol>()
             .Select(x => GetEventSource(x, innerPropertyName));
@@ -108,7 +108,7 @@ public class Decorators(string toolNamespace): GeneratorBase
               """;
     }
 
-    private string GetPropertySource(IPropertySymbol symbol, string innerPropertyName)
+    private string GetPropertySource(IPropertySymbol symbol, string innerPropertyName, string innerTypeName)
     {
         if (symbol.IsIndexer)
         {
@@ -141,6 +141,19 @@ public class Decorators(string toolNamespace): GeneratorBase
                         }
                   """;
         }
+        else if (symbol.IsStatic)
+        {
+            return
+                $$"""
+                      
+                          /// <inheritdoc/>
+                          static {{symbol.Type.ToDisplayString()}} {{innerTypeName}}.{{symbol.Name}}
+                          {
+                             get { throw new NotImplementedException("Cannot implement static abstract properties on a decorator"); }
+                             set { throw new NotImplementedException("Cannot implement static abstract properties on a decorator"); }
+                          }     
+                      """;
+        }
         else
         {
             var getter = symbol.IsWriteOnly
@@ -172,7 +185,7 @@ public class Decorators(string toolNamespace): GeneratorBase
         }
     }
 
-    private string GetMethodSource(IMethodSymbol symbol, string innerPropertyName, string innerTypeName)
+    private string GetMethodSource(IMethodSymbol symbol, string innerPropertyName, string innerTypeName, string className)
     {
         var returnKeyword = symbol.ReturnsVoid ? "" : "return ";
         var genericParameters = symbol.IsGenericMethod ? 
@@ -181,15 +194,16 @@ public class Decorators(string toolNamespace): GeneratorBase
         var genericConstraints = symbol.IsGenericMethod
             ? " " + string.Join(" ", symbol.TypeParameters.Select(BuildConstraintClause))
             : "";
+        var parameterList = string.Join(", ", symbol.Parameters.Select(p => $"{p.Type} {p.Name}"));
         if (symbol.IsStatic)
         {
             return
                 $$"""
                       
                       /// <inheritdoc/>
-                      static {{symbol.ReturnType}} {{innerTypeName}}.{{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}}){{genericConstraints}}
+                      static {{symbol.ReturnType}} {{innerTypeName}}.{{symbol.Name}}{{genericParameters}}({{parameterList}}){{genericConstraints}}
                       {
-                          throw new NotImplementedException();   
+                           throw new NotImplementedException("Cannot implement static abstract methods on a decorator");
                       }     
                   """;
         }
@@ -199,7 +213,7 @@ public class Decorators(string toolNamespace): GeneratorBase
                 $$"""
                       
                       /// <inheritdoc/>
-                      public virtual {{symbol.ReturnType}} {{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => $"{p.Type} {p.Name}"))}}){{genericConstraints}}
+                      public virtual {{symbol.ReturnType}} {{symbol.Name}}{{genericParameters}}({{parameterList}}){{genericConstraints}}
                       {
                           {{returnKeyword}}{{innerPropertyName}}.{{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => p.Name))}});   
                       }     

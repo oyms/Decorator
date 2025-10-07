@@ -1,3 +1,4 @@
+using System.Reflection;
 using NSubstitute;
 using Shouldly;
 using Skaar.Decorator.Tests.Interfaces;
@@ -11,7 +12,7 @@ using Skaar.Decorator.Tests.Interfaces;
         ClassName = nameof(GeneratorTests_Interface1_DecoratorBase),
         Namespace = "Skaar.Decorator.Tests.Interfaces")]
 // [assembly:
-//     Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface1<>>(
+//     Skaar.Decorator.GenerateDecorator(typeof(GeneratorTests_Interface1<,>),
 //         ClassName = "GeneratorTests_Interface1b_DecoratorBase",
 //         Namespace = "Skaar.Decorator.Tests.Interfaces")]
 [assembly:
@@ -108,6 +109,13 @@ public class GeneratorTests
         
         inner.Received()[2, true] = expected;   
     }
+
+    [Fact]
+    public void KastMeg()
+    {
+        var inner = (GeneratorTests_Interface_StaticMethods) Substitute.For([typeof(GeneratorTests_Interface_StaticMethods)], []);
+        var target = new TestTarget2(inner);
+    }
 }
 
 file class TestTarget0(GeneratorTests_Interface0 inner)
@@ -116,6 +124,8 @@ file class TestTarget0(GeneratorTests_Interface0 inner)
 file class TestTarget1(GeneratorTests_Interface1<int, string> inner)
     : Skaar.Decorator.Tests.Interfaces.GeneratorTests_Interface1_DecoratorBase(inner);
  
+file class TestTarget2(GeneratorTests_Interface_StaticMethods inner)
+    : GeneratorTests_Interface_StaticMethodsDecoratorBase(inner);
 
 public interface GeneratorTests_Interface0
 {
@@ -151,8 +161,8 @@ public interface GeneratorTests_Interface1<T, TT> where T: struct
 
 public interface GeneratorTests_Interface_StaticMethods
 {
-    //static abstract void StaticMethod0();
-    //static abstract int StaticMethod1();
-    //static abstract string StaticMethod2(int value);
-    //static abstract string StaticProperty { get; }
+    static abstract void StaticMethod0();
+    static abstract int StaticMethod1();
+    static abstract string StaticMethod2(int value);
+    static abstract string StaticProperty { get; set; }
 }
