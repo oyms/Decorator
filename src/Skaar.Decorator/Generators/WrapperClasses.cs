@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
@@ -43,7 +44,7 @@ public class WrapperClasses(string toolNamespace) : GeneratorBase
         var visibility = targetType.DeclaredAccessibility.ToString().ToLower();
         var genericParameters = GenericTypeParameters.Get(targetType);
         
-        var methods = targetType.GetMembers()
+        var methods = GetAllMembersRecursively(targetType)
             .OfType<IMethodSymbol>()
             .Select(m => m.MethodKind switch
             {
@@ -56,10 +57,10 @@ public class WrapperClasses(string toolNamespace) : GeneratorBase
             })
             .Where(s => s != null)
             .Select(s => s!);
-        var properties = targetType.GetMembers()
+        var properties = GetAllMembersRecursively(targetType)
             .OfType<IPropertySymbol>()
             .Select(x => GetPropertySource(x, innerPropertyName, baseTypeName));
-        var events = targetType.GetMembers()
+        var events = GetAllMembersRecursively(targetType)
             .OfType<IEventSymbol>()
             .Select(x => GetEventSource(x, innerPropertyName));
         return
@@ -83,6 +84,19 @@ public class WrapperClasses(string toolNamespace) : GeneratorBase
                   {{string.Join("\n", events)}}
               }
               """;
+    }
+
+    private IEnumerable<ISymbol> GetAllMembersRecursively(INamedTypeSymbol symbol)
+    {
+        foreach (var member in symbol.GetMembers())
+        {
+            yield return member;
+        }
+
+        foreach (var baseMethod in symbol.Interfaces.SelectMany(GetAllMembersRecursively))
+        {
+            yield return baseMethod;
+        }
     }
 
     private string GetEventSource(IEventSymbol symbol, string innerPropertyName)

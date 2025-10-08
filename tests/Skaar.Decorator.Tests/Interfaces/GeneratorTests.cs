@@ -19,6 +19,10 @@ using Skaar.Decorator.Tests.Interfaces;
     Skaar.Decorator.GenerateDecorator(typeof(GeneratorTests_Interface_StaticMethods),
         ClassName = "GeneratorTests_Interface_StaticMethodsDecoratorBase",
         Namespace = "Skaar.Decorator.Tests.Interfaces")]
+[assembly:
+    Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface_Inheritance_GrandChild>(
+        ClassName = "GeneratorTests_Interface_Inheritance_DecoratorBase",
+        Namespace = "Skaar.Decorator.Tests.Interfaces")]
 
 namespace Skaar.Decorator.Tests.Interfaces;
 
@@ -127,6 +131,9 @@ file class TestTarget1(GeneratorTests_Interface1<int, string> inner)
 file class TestTarget2(GeneratorTests_Interface_StaticMethods inner)
     : GeneratorTests_Interface_StaticMethodsDecoratorBase(inner);
 
+file class TestTarget3(GeneratorTests_Interface_Inheritance_GrandChild inner) 
+    : GeneratorTests_Interface_Inheritance_DecoratorBase(inner); 
+
 file class GeneratorTests_Interface_StaticMethods_Impl : GeneratorTests_Interface_StaticMethods
 {
     public static void StaticMethod0()
@@ -185,4 +192,18 @@ public interface GeneratorTests_Interface_StaticMethods
     static abstract int StaticMethod1();
     static abstract string StaticMethod2(int value);
     static abstract string StaticProperty { get; set; }
+}
+
+public interface GeneratorTests_Interface_Inheritance_GrandChild : GeneratorTests_Interface_Inheritance_Child
+{
+    string Method(double value);
+}
+
+public interface GeneratorTests_Interface_Inheritance_Child : GeneratorTests_Interface_Inheritance_Base<bool>
+{
+    string Method(int value);   
+}
+public interface GeneratorTests_Interface_Inheritance_Base<T> where T: struct
+{
+    string Method(T value);
 }
