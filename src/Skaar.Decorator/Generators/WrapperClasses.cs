@@ -4,32 +4,36 @@ using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
+using Skaar.Decorator.Model;
 
 namespace Skaar.Decorator.Generators;
 
-public class Decorators(string toolNamespace): GeneratorBase
+public class WrapperClasses(string toolNamespace) : GeneratorBase
 {
-    public void Generate(IncrementalGeneratorInitializationContext context, IncrementalValueProvider<ImmutableArray<DecoratorClassParameters>> result)
+    public void Generate(IncrementalGeneratorInitializationContext context,
+        IncrementalValueProvider<ImmutableArray<DecoratorClassParameters>> result)
     {
         context.RegisterSourceOutput(result, (ctx, decoratorParams) =>
         {
             foreach (var param in decoratorParams)
             {
                 var targetType = param.TargetType;
-                 var isInterface = targetType.TypeKind == TypeKind.Interface;
-                 if (!isInterface)
-                 {
-                     throw new NotImplementedException("Only implement interface types");
-                 }
-                ctx.AddSource($"{param.Namespace}.{param.ClassName}.g.cs", SourceText.From(GetClassSource(param), Encoding.UTF8));
+                var isInterface = targetType.TypeKind == TypeKind.Interface;
+                if (!isInterface)
+                {
+                    throw new NotImplementedException("Only implement interface types");
+                }
+
+                ctx.AddSource($"{param.Namespace}.{param.ClassName}.g.cs",
+                    SourceText.From(GetClassSource(param), Encoding.UTF8));
             }
         });
     }
 
     private string GetClassSource(DecoratorClassParameters classParams)
     {
-        var targetType = classParams.TargetType;
-        var innerPropertyName = GetSafePropertyName("Inner",  targetType.GetMembers());
+        var targetType = classParams.TargetType.IsUnboundGenericType ? classParams.TargetType.OriginalDefinition : classParams.TargetType;
+        var innerPropertyName = GetSafePropertyName("Inner", targetType.GetMembers());
         var baseTypeName = targetType.ToDisplayString();
         var targetTypeCanBeUsedAsGenericArgument =
             !(targetType.TypeKind == TypeKind.Interface &&
@@ -37,24 +41,16 @@ public class Decorators(string toolNamespace): GeneratorBase
         var decoratorTypeArgument = targetTypeCanBeUsedAsGenericArgument ? baseTypeName : "object";
         var decoratorInterfaceName = $"{toolNamespace}.{Interfaces.InterfaceName}<{decoratorTypeArgument}>";
         var visibility = targetType.DeclaredAccessibility.ToString().ToLower();
-        var isGeneric = targetType.IsGenericType &&
-                        (targetType.IsUnboundGenericType ||
-                         targetType.TypeArguments.Any(a => a.TypeKind == TypeKind.TypeParameter)
-                        );
-        var genericParameters = isGeneric ? 
-            $"<{string.Join(", ", targetType.TypeParameters.Select(t => t.Name))}>" :
-            string.Empty;
-        var genericConstraints = isGeneric ?
-        " " + string.Join(" ", targetType.TypeParameters.Select(BuildConstraintClause)) :
-        string.Empty;
+        var genericParameters = GenericTypeParameters.Get(targetType);
+        
         var methods = targetType.GetMembers()
             .OfType<IMethodSymbol>()
             .Select(m => m.MethodKind switch
             {
-                MethodKind.Ordinary => GetMethodSource(m, innerPropertyName, baseTypeName, classParams.ClassName),
+                MethodKind.Ordinary => GetMethodSource(m, innerPropertyName, baseTypeName),
                 MethodKind.PropertyGet => null,
                 MethodKind.PropertySet => null,
-                MethodKind.EventAdd  => null,
+                MethodKind.EventAdd => null,
                 MethodKind.EventRemove => null,
                 _ => $"// Not implemented {m.Name}\n"
             })
@@ -66,33 +62,27 @@ public class Decorators(string toolNamespace): GeneratorBase
         var events = targetType.GetMembers()
             .OfType<IEventSymbol>()
             .Select(x => GetEventSource(x, innerPropertyName));
-        return 
+        return
             $$"""
-            #nullable enable
-            
-            namespace {{classParams.Namespace}};               
-                          
-            {{GeneratedCodeAttribute}}
-            {{visibility}} abstract class {{classParams.ClassName}}{{genericParameters}} : {{baseTypeName}}, {{decoratorInterfaceName}}{{genericConstraints}}
-            {
-                protected {{baseTypeName}} {{innerPropertyName}} { get; }
-                {{decoratorTypeArgument}} {{decoratorInterfaceName}}.{{Interfaces.PropertyName}} => {{innerPropertyName}};
-                protected {{classParams.ClassName}}({{baseTypeName}} inner)
-                {
-                    {{innerPropertyName}} = inner;
-                }
-                
-                {{string.Join("\n", properties)}}
-                {{string.Join("\n", methods)}}
-                {{string.Join("\n", events)}}
-            }
-            """;
-    }
+              #nullable enable
 
-    private string GetSafePropertyName(string suggestion, ImmutableArray<ISymbol> symbols)
-    {
-        if (symbols.Any(s => s.Name == suggestion)) return GetSafePropertyName("_" + suggestion, symbols);
-        return suggestion;
+              namespace {{classParams.Namespace}};               
+                            
+              {{GeneratedCodeAttribute}}
+              {{visibility}} abstract class {{classParams.ClassName}}{{genericParameters}} : {{baseTypeName}}, {{decoratorInterfaceName}}{{genericParameters.Constraints()}}
+              {
+                  protected {{baseTypeName}} {{innerPropertyName}} { get; }
+                  {{decoratorTypeArgument}} {{decoratorInterfaceName}}.{{Interfaces.PropertyName}} => {{innerPropertyName}};
+                  protected {{classParams.ClassName}}({{baseTypeName}} inner)
+                  {
+                      {{innerPropertyName}} = inner;
+                  }
+                  
+                  {{string.Join("\n", properties)}}
+                  {{string.Join("\n", methods)}}
+                  {{string.Join("\n", events)}}
+              }
+              """;
     }
 
     private string GetEventSource(IEventSymbol symbol, string innerPropertyName)
@@ -145,14 +135,14 @@ public class Decorators(string toolNamespace): GeneratorBase
         {
             return
                 $$"""
-                      
-                          /// <inheritdoc/>
-                          static {{symbol.Type.ToDisplayString()}} {{innerTypeName}}.{{symbol.Name}}
-                          {
-                             get { throw new NotImplementedException("Cannot implement static abstract properties on a decorator"); }
-                             set { throw new NotImplementedException("Cannot implement static abstract properties on a decorator"); }
-                          }     
-                      """;
+
+                      /// <inheritdoc/>
+                      static {{symbol.Type.ToDisplayString()}} {{innerTypeName}}.{{symbol.Name}}
+                      {
+                         get { throw new NotImplementedException("Cannot implement static abstract properties on a decorator"); }
+                         set { throw new NotImplementedException("Cannot implement static abstract properties on a decorator"); }
+                      }     
+                  """;
         }
         else
         {
@@ -185,15 +175,10 @@ public class Decorators(string toolNamespace): GeneratorBase
         }
     }
 
-    private string GetMethodSource(IMethodSymbol symbol, string innerPropertyName, string innerTypeName, string className)
+    private string GetMethodSource(IMethodSymbol symbol, string innerPropertyName, string innerTypeName)
     {
         var returnKeyword = symbol.ReturnsVoid ? "" : "return ";
-        var genericParameters = symbol.IsGenericMethod ? 
-            $"<{string.Join(", ", symbol.TypeParameters.Select(t => t.Name))}>" : 
-            "";
-        var genericConstraints = symbol.IsGenericMethod
-            ? " " + string.Join(" ", symbol.TypeParameters.Select(BuildConstraintClause))
-            : "";
+        var genericParameters = GenericTypeParameters.Get(symbol);
         var parameterList = string.Join(", ", symbol.Parameters.Select(p => $"{p.Type} {p.Name}"));
         if (symbol.IsStatic)
         {
@@ -201,7 +186,7 @@ public class Decorators(string toolNamespace): GeneratorBase
                 $$"""
                       
                       /// <inheritdoc/>
-                      static {{symbol.ReturnType}} {{innerTypeName}}.{{symbol.Name}}{{genericParameters}}({{parameterList}}){{genericConstraints}}
+                      static {{symbol.ReturnType}} {{innerTypeName}}.{{symbol.Name}}{{genericParameters}}({{parameterList}}){{genericParameters.Constraints()}}
                       {
                            throw new NotImplementedException("Cannot implement static abstract methods on a decorator");
                       }     
@@ -213,37 +198,11 @@ public class Decorators(string toolNamespace): GeneratorBase
                 $$"""
                       
                       /// <inheritdoc/>
-                      public virtual {{symbol.ReturnType}} {{symbol.Name}}{{genericParameters}}({{parameterList}}){{genericConstraints}}
+                      public virtual {{symbol.ReturnType}} {{symbol.Name}}{{genericParameters}}({{parameterList}}){{genericParameters.Constraints()}}
                       {
                           {{returnKeyword}}{{innerPropertyName}}.{{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => p.Name))}});   
                       }     
                   """;
         }
-    }
-    
-    private string BuildConstraintClause(ITypeParameterSymbol tp)
-    {
-        var parts = new System.Collections.Generic.List<string>();
-
-        // class / struct / unmanaged / notnull
-        if (tp.HasReferenceTypeConstraint)
-        {
-            var ann = tp.ReferenceTypeConstraintNullableAnnotation == NullableAnnotation.Annotated ? "class?" : "class";
-            parts.Add(ann);
-        }
-        if (tp.HasValueTypeConstraint) parts.Add("struct");
-        if (tp.HasUnmanagedTypeConstraint) parts.Add("unmanaged");
-        if (tp.HasNotNullConstraint) parts.Add("notnull");
-
-        // type constraints
-        if (tp.ConstraintTypes.Length > 0)
-        {
-            parts.AddRange(tp.ConstraintTypes.Select(t => t.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
-        }
-
-        // new()
-        if (tp.HasConstructorConstraint) parts.Add("new()");
-
-        return parts.Count == 0 ? "" : $"where {tp.Name} : {string.Join(", ", parts)}";
     }
 }

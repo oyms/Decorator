@@ -11,10 +11,10 @@ using Skaar.Decorator.Tests.Interfaces;
     Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface1<int, string>>(
         ClassName = nameof(GeneratorTests_Interface1_DecoratorBase),
         Namespace = "Skaar.Decorator.Tests.Interfaces")]
-// [assembly:
-//     Skaar.Decorator.GenerateDecorator(typeof(GeneratorTests_Interface1<,>),
-//         ClassName = "GeneratorTests_Interface1b_DecoratorBase",
-//         Namespace = "Skaar.Decorator.Tests.Interfaces")]
+[assembly:
+    Skaar.Decorator.GenerateDecorator(typeof(GeneratorTests_Interface1<,>),
+        ClassName = "GeneratorTests_Interface1b_DecoratorBase",
+        Namespace = "Skaar.Decorator.Tests.Interfaces")]
 [assembly:
     Skaar.Decorator.GenerateDecorator(typeof(GeneratorTests_Interface_StaticMethods),
         ClassName = "GeneratorTests_Interface_StaticMethodsDecoratorBase",
@@ -111,9 +111,9 @@ public class GeneratorTests
     }
 
     [Fact]
-    public void KastMeg()
+    public void StaticMethodsImplementation()
     {
-        var inner = (GeneratorTests_Interface_StaticMethods) Substitute.For([typeof(GeneratorTests_Interface_StaticMethods)], []);
+        var inner = new GeneratorTests_Interface_StaticMethods_Impl();
         var target = new TestTarget2(inner);
     }
 }
@@ -126,6 +126,26 @@ file class TestTarget1(GeneratorTests_Interface1<int, string> inner)
  
 file class TestTarget2(GeneratorTests_Interface_StaticMethods inner)
     : GeneratorTests_Interface_StaticMethodsDecoratorBase(inner);
+
+file class GeneratorTests_Interface_StaticMethods_Impl : GeneratorTests_Interface_StaticMethods
+{
+    public static void StaticMethod0()
+    {
+        throw new NotImplementedException();
+    }
+
+    public static int StaticMethod1()
+    {
+        throw new NotImplementedException();
+    }
+
+    public static string StaticMethod2(int value)
+    {
+        throw new NotImplementedException();
+    }
+
+    public static string StaticProperty { get; set; }
+}
 
 public interface GeneratorTests_Interface0
 {

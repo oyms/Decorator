@@ -11,7 +11,7 @@ public class Generator : IIncrementalGenerator
     {
         var @namespace = GetType().Namespace!;
         var attr = new Attributes(@namespace);
-        var decorators = new Decorators(@namespace);
+        var decorators = new WrapperClasses(@namespace);
         var interfaces = new Interfaces(@namespace);
         
         attr.Generate(context);
@@ -23,7 +23,7 @@ public class Generator : IIncrementalGenerator
     private void GenerateDecoratorClasses(
         IncrementalGeneratorInitializationContext context, 
         Attributes attr, 
-        Decorators decorators)
+        WrapperClasses decorators)
     {
         var result = context.SyntaxProvider
             .CreateSyntaxProvider(
