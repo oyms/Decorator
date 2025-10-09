@@ -1,6 +1,8 @@
 Decorator
 ===
 
+[![Static Badge](https://img.shields.io/badge/Wikipedia-Decorator_pattern-blue?label=Wikipedia&link=https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FDecorator_pattern)](https://en.wikipedia.org/wiki/Decorator_pattern)
+
 This library generates code for wrapper classes, enabling
 easy implementation of decorators.
 

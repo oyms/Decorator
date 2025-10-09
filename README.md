@@ -62,3 +62,28 @@ all calling the inner component.
 
 Create your own concrete decorator class inheriting from the generated base class.
 Override the relevant operations.
+
+> [!NOTE]
+> The inner type must be an interface.
+> It must be public or internal.
+> It cannot be a nested type.
+
+Static abstract methods are implemented with
+a `NotImplementedException`, as there is no way to find the
+actual target type in a static context.
+
+The wrapper class implements `Skaar.Decorator.IDecorator<T>` 
+where `T` is the inner type. It has a property `Inner`
+to access the inner instance.
+When `T` has static methods, the wrapper class
+implements `Skaar.Decorator.IDecorator<object>`, as `T` 
+cannot be used as a generic argument.
+
+Unbound generic interfaces can be used as inner types,
+using the overload of the attribute taking a type as argument.
+
+```csharp
+[assembly: Skaar.Decorator.GenerateDecorator(typeof(IMyInterface<,>)]
+```
+
+This will generate a generic wrapper class.
