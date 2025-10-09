@@ -24,6 +24,13 @@ using Skaar.Decorator.Tests.Interfaces;
         ClassName = "GeneratorTests_Interface_Inheritance_DecoratorBase",
         Namespace = "Skaar.Decorator.Tests.Interfaces")]
 
+// [assembly: Skaar.Decorator.GenerateDecorator<string>]
+// [assembly: Skaar.Decorator.GenerateDecorator<GeneratorTests_Interface1_DecoratorBase>]
+// [assembly: Skaar.Decorator.GenerateDecorator<TestTarget1>]
+// [assembly: Skaar.Decorator.GenerateDecorator<ParentType.IInterface>]
+
+
+
 namespace Skaar.Decorator.Tests.Interfaces;
 
 public class GeneratorTests
@@ -181,12 +188,12 @@ public interface GeneratorTests_Interface0
     int Inner { set; }
 }
 
-public interface GeneratorTests_Interface1<T, TT> where T: struct
+interface GeneratorTests_Interface1<T, TT> where T: struct
 {
     T Method(TT value);
 }
 
-public interface GeneratorTests_Interface_StaticMethods
+interface GeneratorTests_Interface_StaticMethods
 {
     static abstract void StaticMethod0();
     static abstract int StaticMethod1();
@@ -194,7 +201,7 @@ public interface GeneratorTests_Interface_StaticMethods
     static abstract string StaticProperty { get; set; }
 }
 
-public interface GeneratorTests_Interface_Inheritance_GrandChild : GeneratorTests_Interface_Inheritance_Child
+interface GeneratorTests_Interface_Inheritance_GrandChild : GeneratorTests_Interface_Inheritance_Child
 {
     string Method(double value);
 }
@@ -206,4 +213,9 @@ public interface GeneratorTests_Interface_Inheritance_Child : GeneratorTests_Int
 public interface GeneratorTests_Interface_Inheritance_Base<T> where T: struct
 {
     string Method(T value);
+}
+
+public class ParentType
+{
+    public interface IInterface;
 }

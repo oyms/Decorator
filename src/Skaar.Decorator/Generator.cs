@@ -7,9 +7,10 @@ namespace Skaar.Decorator;
 [Generator]
 public class Generator : IIncrementalGenerator
 {
+    internal static string Namespace => (typeof(Generator).Namespace!);
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var @namespace = GetType().Namespace!;
+        var @namespace = Namespace;
         var attr = new Attributes(@namespace);
         var decorators = new WrapperClasses(@namespace);
         var interfaces = new Interfaces(@namespace);

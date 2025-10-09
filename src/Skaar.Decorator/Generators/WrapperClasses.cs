@@ -22,7 +22,8 @@ public class WrapperClasses(string toolNamespace) : GeneratorBase
                 var isInterface = targetType.TypeKind == TypeKind.Interface;
                 if (!isInterface)
                 {
-                    throw new NotImplementedException("Only implement interface types");
+                    //"Only implement interface types"
+                    return;
                 }
 
                 ctx.AddSource($"{param.Namespace}.{param.ClassName}.g.cs",

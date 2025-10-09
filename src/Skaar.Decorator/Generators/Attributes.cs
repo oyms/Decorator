@@ -22,9 +22,11 @@ public class Attributes(string @namespace) : GeneratorBase
         });
     }
 
-    public DecoratorClassParameters? ParseAttribute(GeneratorSyntaxContext context, CancellationToken _ = default)
+    public DecoratorClassParameters? ParseAttribute(GeneratorSyntaxContext context, CancellationToken _ = default) 
+        => ParseAttribute((AttributeSyntax)context.Node, context.SemanticModel);
+
+    public DecoratorClassParameters? ParseAttribute(AttributeSyntax attributeSyntax, SemanticModel model)
     {
-        var attributeSyntax = (AttributeSyntax)context.Node;
         SimpleNameSyntax? nameSyntax = attributeSyntax.Name switch
         {
             GenericNameSyntax g => g,
@@ -41,7 +43,6 @@ public class Attributes(string @namespace) : GeneratorBase
             return null;
         }
 
-        var model = context.SemanticModel;
         var symbol = model.GetSymbolInfo(attributeSyntax).Symbol as IMethodSymbol;
         if (symbol?.ContainingType is not { } attributeType)
         {
