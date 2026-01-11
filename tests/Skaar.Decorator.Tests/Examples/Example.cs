@@ -1,7 +1,10 @@
 // Generated a wrapper base class
-[assembly:Skaar.Decorator.GenerateDecorator<Skaar.Decorator.Example.IComponent>]
 
-namespace Skaar.Decorator.Example;
+using Skaar.Decorator.Tests.Examples;
+
+[assembly:Skaar.Decorator.GenerateDecorator<IComponent>]
+
+namespace Skaar.Decorator.Tests.Examples;
 
 // Create a decorator inheriting from the generated class.
 // Override the relevant operations.
