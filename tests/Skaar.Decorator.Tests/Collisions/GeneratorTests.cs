@@ -38,9 +38,12 @@ public interface ISub0
 {
     string Name0 { get; set; }
     string Name1(int intArgument);
+    string NonCollidingName(int intArgument);
 }
 public interface ISub1
 {
     string Name1 { get; set; }
     string Name0(int intArgument);
+    
+    string AlsoNonCollidingName(int intArgument);
 }
