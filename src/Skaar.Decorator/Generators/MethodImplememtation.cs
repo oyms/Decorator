@@ -18,10 +18,36 @@ class MethodImplememtation(IMethodSymbol symbol, string innerPropertyName, strin
                 $$"""
                       
                       /// <inheritdoc/>
+                      /// <exception cref="System.NotSupportedException">Cannot implement static abstract methods on a decorator</exception>
                       static {{symbol.ReturnType}} {{innerTypeName}}.{{symbol.Name}}{{genericParameters}}({{parameterList}}){{genericParameters.Constraints()}}
                       {
-                           throw new NotImplementedException("Cannot implement static abstract methods on a decorator");
+                           throw new System.NotSupportedException("Cannot implement static abstract methods on a decorator");
                       }     
+                  """;
+        }
+        if (hasNameCollision)
+        {
+            var containingType = symbol.ContainingType;
+            var containingTypeName = containingType.ToDisplayString();
+            var intermediateMethodName = CreateIntermediateName();
+            return
+                $$"""
+
+                      /// <remarks>
+                      /// Override this to customize {{containingTypeName}}.{{symbol.Name}}.
+                      /// </remarks>
+                      protected virtual {{symbol.ReturnType}} {{intermediateMethodName}}({{parameterList}}){{genericParameters.Constraints()}}
+                      {
+                        var that = ({{containingTypeName}}) {{innerPropertyName}};
+                        {{returnKeyword}}that.{{symbol.Name}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => p.Name))}});  
+                      }
+                      
+                      /// <inheritdoc/>
+                      {{symbol.ReturnType}} {{containingTypeName}}.{{symbol.Name}}{{genericParameters}}({{parameterList}}){{genericParameters.Constraints()}}
+                      {
+                          {{returnKeyword}}this.{{intermediateMethodName}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => p.Name))}});   
+                      }  
+                  
                   """;
         }
         else

@@ -58,7 +58,7 @@ class PropertyImplementation(IPropertySymbol symbol, string innerPropertyName, s
     {
         var containingType = symbol.ContainingType;
         var containingTypeName = containingType.ToDisplayString();
-        var intermediatePropertyName = "__" + containingTypeName.Replace('.', '_') + "_" + symbol.Name;
+        var intermediatePropertyName = CreateIntermediateName();
 
         var intermediateProperty = GenerateIntermediateProperty(intermediatePropertyName, containingTypeName);
 
@@ -125,6 +125,7 @@ class PropertyImplementation(IPropertySymbol symbol, string innerPropertyName, s
                  """;
     }
 
+    
     private string GenerateIndexer()
     {
         var parameters = symbol.Parameters;

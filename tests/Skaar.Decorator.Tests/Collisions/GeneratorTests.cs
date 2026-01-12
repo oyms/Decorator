@@ -11,7 +11,7 @@ public class GeneratorTests
     public void WithNameCollisions_ShouldNotFail()
     {
         var inner = Substitute.For<IMain>();
-        inner.GetEnumerator().Returns(new[]{true, false}.GetEnumerator());
+        inner.GetEnumerator().Returns(new[]{true}.ToList().GetEnumerator());
         ((ISub0)inner).Name0.Returns("Name0");
         ((ISub0)inner).Name1(Arg.Any<int>()).Returns("Name1");
         ((ISub1)inner).Name1.Returns("Name1");
@@ -28,6 +28,12 @@ public class GeneratorTests
         t1.Name0(1).ShouldBe("Name0");
     }
 }
+
+//TODO: Colliding events
+
+//TODO: Colliding properties and methods
+
+//TODO: Overloaded methods are not colliding
 
 file class TestTarget(IMain inner)
     : IMainDecoratorBase(inner);

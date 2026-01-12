@@ -6,4 +6,13 @@ abstract class MemberImplementation(ISymbol symbol)
 {
     public string Name => symbol.Name;
     public abstract string GetSource(bool hasNameCollision);
+
+    protected string CreateIntermediateName() =>
+        $"__{symbol
+            .ContainingType
+            .ToDisplayString()
+            .Replace('.', '_')
+            .Replace('<', '_')
+            .Replace('>', '_')
+        }_{symbol.Name}";
 }
