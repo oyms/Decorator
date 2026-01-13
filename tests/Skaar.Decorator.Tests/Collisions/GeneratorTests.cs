@@ -11,7 +11,7 @@ public class GeneratorTests
     public void WithNameCollisions_ShouldNotFail()
     {
         var inner = Substitute.For<IMain>();
-        inner.GetEnumerator().Returns(new[]{true}.ToList().GetEnumerator());
+        ((IEnumerable<bool>)inner).GetEnumerator().Returns(new[]{true}.ToList().GetEnumerator());
         ((ISub0)inner).Name0.Returns("Name0");
         ((ISub0)inner).Name1(Arg.Any<int>()).Returns("Name1");
         ((ISub1)inner).Name1.Returns("Name1");
@@ -21,7 +21,7 @@ public class GeneratorTests
         var t0 = target as ISub0;
         var t1 = target as ISub1;
         
-        inner.First().ShouldBe(true);
+        ((IEnumerable<bool>)inner).First().ShouldBe(true);
         t0.Name0.ShouldBe("Name0");
         t0.Name1(1).ShouldBe("Name1");
         t1.Name1.ShouldBe("Name1");
@@ -29,16 +29,16 @@ public class GeneratorTests
     }
 }
 
-//TODO: Colliding events
-
 //TODO: Colliding properties and methods
 
 //TODO: Overloaded methods are not colliding
 
+//TODO: Handle multiple IEnumerable<T>
+
 file class TestTarget(IMain inner)
     : IMainDecoratorBase(inner);
 
-public interface IMain : ISub0, ISub1, IEnumerable<bool>;
+public interface IMain : ISub0, ISub1, ISub2, IEnumerable<bool>, IEnumerable<int>;
 
 public interface ISub0
 {
@@ -52,4 +52,10 @@ public interface ISub1
     string Name0(int intArgument);
     
     string AlsoNonCollidingName(int intArgument);
+}
+
+public interface ISub2
+{
+    string Name0(int intArgument);
+    event EventHandler<int> Name1;
 }

@@ -33,6 +33,7 @@ class MethodImplememtation(IMethodSymbol symbol, string innerPropertyName, strin
             return
                 $$"""
 
+                      #region {{containingTypeName}}.{{symbol.Name}}
                       /// <remarks>
                       /// Override this to customize {{containingTypeName}}.{{symbol.Name}}.
                       /// </remarks>
@@ -46,7 +47,8 @@ class MethodImplememtation(IMethodSymbol symbol, string innerPropertyName, strin
                       {{symbol.ReturnType}} {{containingTypeName}}.{{symbol.Name}}{{genericParameters}}({{parameterList}}){{genericParameters.Constraints()}}
                       {
                           {{returnKeyword}}this.{{intermediateMethodName}}{{genericParameters}}({{string.Join(", ", symbol.Parameters.Select(p => p.Name))}});   
-                      }  
+                      }
+                      #endregion  
                   
                   """;
         }
