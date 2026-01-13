@@ -1,7 +1,9 @@
 using NSubstitute;
 using Shouldly;
+// ReSharper disable All
 
 [assembly: Skaar.Decorator.GenerateDecorator<Skaar.Decorator.Tests.Collisions.IMain>]
+[assembly: Skaar.Decorator.GenerateDecorator<Skaar.Decorator.Tests.Collisions.IMain1>]
 
 namespace Skaar.Decorator.Tests.Collisions;
 
@@ -17,7 +19,7 @@ public class GeneratorTests
         ((ISub1)inner).Name1.Returns("Name1");
         ((ISub1)inner).Name0(Arg.Any<int>()).Returns("Name0");
         
-        var target = new TestTarget(inner);
+        var target = new TestTarget0(inner);
         var t0 = target as ISub0;
         var t1 = target as ISub1;
         
@@ -29,16 +31,23 @@ public class GeneratorTests
     }
 }
 
-//TODO: Colliding properties and methods
-
-//TODO: Overloaded methods are not colliding
-
-//TODO: Handle multiple IEnumerable<T>
-
-file class TestTarget(IMain inner)
+file class TestTarget0(IMain inner)
     : IMainDecoratorBase(inner);
 
+file class TestTarget1(IMain1 inner)
+    : IMain1DecoratorBase(inner)
+{
+}
+
+
 public interface IMain : ISub0, ISub1, ISub2, IEnumerable<bool>, IEnumerable<int>;
+
+public interface IMain1 : ISub0, ISub3
+{
+    string Name0(int intArgument);
+    string Name0(int intArgument, bool otherArgument);
+    int Name1(int argument);
+}
 
 public interface ISub0
 {
@@ -58,4 +67,11 @@ public interface ISub2
 {
     string Name0(int intArgument);
     event EventHandler<int> Name1;
+}
+
+public interface ISub3
+{
+    bool Name2();
+    string Name2(int intArgument);
+    byte Name2(string stringArgument);
 }

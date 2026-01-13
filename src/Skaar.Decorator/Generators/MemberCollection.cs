@@ -25,7 +25,7 @@ class MemberCollection
     {
         foreach (var membersWithSameName in _members.GroupBy(m => m.Name).OrderBy(g => g.Key))
         {
-            var isCollision = membersWithSameName.Count() > 1;
+            var isCollision = IsCollision(membersWithSameName);
             foreach (var member in membersWithSameName)
             {
                 yield return member.GetSource(isCollision);
@@ -33,19 +33,21 @@ class MemberCollection
         }
     }
 
+    private static bool IsCollision(IEnumerable<MemberImplementation> membersWithSameName)
+    {
+        var members = membersWithSameName.ToList();
+        if (members.Count() < 2) return false;
+        if (members.All(m => m is MethodImplememtation))
+        {
+            var names = members
+                .Cast<MethodImplememtation>()
+                .Select(m => m.GetSignature())
+                .ToList();
+            return names.Distinct().Count() != names.Count();
+        }
+
+        return true;
+    }
+
     public override string ToString() => string.Join("\n", GetSources(_members));
-}
-
-class MemberEqualityComparer : IEqualityComparer<MemberImplementation>
-{
-    private SymbolEqualityComparer _inner = SymbolEqualityComparer.Default;
-    public bool Equals(MemberImplementation x, MemberImplementation y)
-    {
-        return _inner.Equals(x.Symbol, y.Symbol);
-    }
-
-    public int GetHashCode(MemberImplementation obj)
-    {
-        return _inner.GetHashCode(obj.Symbol);
-    }
 }

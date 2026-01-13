@@ -7,6 +7,12 @@ namespace Skaar.Decorator.Generators;
 class MethodImplememtation(IMethodSymbol symbol, string innerPropertyName, string innerTypeName)
     : MemberImplementation(symbol)
 {
+    public string GetSignature()
+    {
+        var genericParameters = GenericTypeParameters.Get(symbol);
+        var parameterList = string.Join(", ", symbol.Parameters.Select(p => $"{p.Type}"));
+        return $"{symbol.Name}{genericParameters}({parameterList})";
+    }
     public override string GetSource(bool hasNameCollision)
     {
         var returnKeyword = symbol.ReturnsVoid ? "" : "return ";
