@@ -69,7 +69,7 @@ Override the relevant operations.
 > It cannot be a nested type.
 
 Static abstract methods are implemented with
-a `NotImplementedException`, as there is no way to find the
+a `NotSupportedException`, as there is no way to find the
 actual target type in a static context.
 
 The wrapper class implements `Skaar.Decorator.IDecorator<T>` 
@@ -87,3 +87,41 @@ using the overload of the attribute taking a type as argument.
 ```
 
 This will generate a generic wrapper class.
+
+## Example
+
+There is an interface you want to decorate. This type may, or may not be imported from another library.
+
+```csharp
+public interface IComponent
+{
+    string Operation(int value);
+}
+```
+
+You then generate a wrapper class using the attribute.
+
+```csharp
+[assembly:Skaar.Decorator.GenerateDecorator<IComponent>]
+```
+
+Then you can create a decorator, inheriting from the generated class.
+In the class, you override the methods you need to intercept.
+
+```csharp
+public class ConcreteDecorator(IComponent inner) : IComponentDecoratorBase(inner)
+{
+    public override string Operation(int value)
+    {
+        return $"Decorated: {value}" + base.Operation(value);
+    }
+}
+
+```
+
+## Name collisions
+
+In the case of a name collision (when the interface in question inherits other interfaces, and they have members 
+with the same name; for instance a both a property and a method named `Operation`), the generated class will 
+create an intermediate protected member for you to override. 
+The implemented member is implemented explicitly to the interface from which it came.
