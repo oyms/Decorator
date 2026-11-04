@@ -45,6 +45,16 @@ to facilitate [the decorator pattern](https://en.wikipedia.org/wiki/Decorator_pa
 dotnet add package Skaar.Decorator
 ```
 
+The package contains the source generator and a small library, `Skaar.Decorator.Abstractions`,
+with the `GenerateDecorator` attributes and the `IDecorator<T>` interface.
+Because these types live in one shared assembly, several assemblies can use the generator
+and reference each other without type conflicts.
+
+> [!IMPORTANT]
+> If you build a library that exposes generated decorators, **do not** reference the package with
+> `PrivateAssets="all"`. Consumers of your library need the abstractions library.
+> The default `PrivateAssets` (which excludes analyzers) is right: consumers get the library, not the generator.
+
 Add assembly attributes for the interfaces and wrapper classes
 you need.
 

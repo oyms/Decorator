@@ -29,6 +29,17 @@ public class GeneratorTests
         t1.Name1.ShouldBe("Name1");
         t1.Name0(1).ShouldBe("Name0");
     }
+
+    [Fact]
+    public void Decorator_ImplementsIDecorator_WithInnerValue()
+    {
+        var inner = Substitute.For<IMain>();
+
+        var target = new TestTarget0(inner);
+
+        var decorator = target.ShouldBeAssignableTo<IDecorator<IMain>>();
+        decorator!.Inner.ShouldBeSameAs(inner);
+    }
 }
 
 file class TestTarget0(IMain inner)

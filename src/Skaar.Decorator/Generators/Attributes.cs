@@ -1,11 +1,8 @@
 #nullable enable
 using System;
-using System.CodeDom.Compiler;
-using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 
 namespace Skaar.Decorator.Generators;
 
@@ -13,14 +10,6 @@ public class Attributes(string @namespace) : GeneratorBase
 {
     public const string AttributeName = AttributeShortName + "Attribute";
     public const string AttributeShortName = "GenerateDecorator";
-
-    public void Generate(IncrementalGeneratorInitializationContext context)
-    {
-        context.RegisterPostInitializationOutput(ctx =>
-        {
-            ctx.AddSource($"{AttributeName}.g.cs", SourceText.From(AttributeSource(AttributeName), Encoding.UTF8));
-        });
-    }
 
     public DecoratorClassParameters? ParseAttribute(GeneratorSyntaxContext context, CancellationToken _ = default) 
         => ParseAttribute((AttributeSyntax)context.Node, context.SemanticModel);
@@ -130,47 +119,4 @@ public class Attributes(string @namespace) : GeneratorBase
                     
         return new DecoratorClassParameters(targetType, className, targetNamespace);
     }
-    
-    private string AttributeSource(string className) =>
-        $$"""
-          using System;
-
-          #nullable enable
-          #pragma warning disable CS0436 // Type may be defined multiple times
-          namespace {{@namespace}};
-
-          /// <summary>
-          /// This attribute will generate a decorator class wrapping the given type.
-          /// </summary>
-          {{GeneratedCodeAttribute}}
-          [System.AttributeUsage(System.AttributeTargets.Assembly | System.AttributeTargets.Class| System.AttributeTargets.Interface, AllowMultiple = true)]
-          public class {{className}} : System.Attribute 
-          {
-            public {{className}}(Type targetType)
-            {
-                TargetType = targetType;
-            }
-            ///<summary>The type of the inner value this type wraps.</summary>
-            public Type TargetType { get; }
-            ///<summary>The name of the generated class</summary>
-            public string? ClassName { get; set; }
-            ///<summary>The namespace of the generated class</summary>
-            public string? Namespace { get; set; }
-          }
-
-          /// <summary>
-          /// This attribute will generate a decorator class wrapping the given type.
-          /// </summary>
-          /// <typeparam name="T">The type of the inner value this type wraps.</typeparam>
-          {{GeneratedCodeAttribute}}
-          [System.AttributeUsage(System.AttributeTargets.Assembly | System.AttributeTargets.Class| System.AttributeTargets.Interface, AllowMultiple = true)]
-          public class {{className}}<T> : System.Attribute where T: class 
-          {
-            ///<summary>The name of the generated class</summary>
-            public string? ClassName { get; set; }
-            ///<summary>The namespace of the generated class</summary>
-            public string? Namespace { get; set; }
-          }
-
-          """;
 }

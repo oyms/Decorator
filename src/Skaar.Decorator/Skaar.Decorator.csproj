@@ -4,14 +4,16 @@
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>latest</LangVersion>
         <OutputItemType>Analyzer</OutputItemType>
-        <InclydeBuildOutput>false</InclydeBuildOutput>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
         <IsRoslynAnalyzer>true</IsRoslynAnalyzer>
         <IsGenerator>true</IsGenerator>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <RootNamespace>Skaar.Decorator</RootNamespace>
     </PropertyGroup>
     <ItemGroup>
+        <!-- Do not upgrade past the compiler in the oldest SDK consumers use (4.14 = SDK 9.0.3xx). A newer version makes the generator fail to load (CS9057). -->
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
+        <PackageReference Update="Microsoft.SourceLink.GitHub" Version="10.0.403" />
     </ItemGroup>
 
     <ItemGroup>
@@ -20,5 +22,21 @@
 
     <ItemGroup>
         <None Include="$(TargetPath)" Pack="true" PackagePath="analyzers/dotnet/cs/" />
+    </ItemGroup>
+
+    <!-- The types referenced by generated code are shipped as a regular library in the same package -->
+    <ItemGroup>
+        <ProjectReference Include="..\Skaar.Decorator.Abstractions\Skaar.Decorator.Abstractions.csproj"
+                          ReferenceOutputAssembly="false"
+                          PrivateAssets="all" />
+    </ItemGroup>
+    <PropertyGroup>
+        <!-- Nothing left for a symbol package; the abstractions assembly embeds its pdb -->
+        <IncludeSymbols>false</IncludeSymbols>
+        <AbstractionsOutputPath>..\Skaar.Decorator.Abstractions\bin\$(Configuration)\netstandard2.0\</AbstractionsOutputPath>
+    </PropertyGroup>
+    <ItemGroup>
+        <None Include="$(AbstractionsOutputPath)Skaar.Decorator.Abstractions.dll" Pack="true" PackagePath="lib/netstandard2.0/" Visible="false" />
+        <None Include="$(AbstractionsOutputPath)Skaar.Decorator.Abstractions.xml" Pack="true" PackagePath="lib/netstandard2.0/" Visible="false" />
     </ItemGroup>
 </Project>

@@ -3,7 +3,7 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CS1591;CA1822</NoWarn>
         <AssemblyVersion>$(Version)</AssemblyVersion>
-        <VersionPrefix>2.0.0</VersionPrefix>
+        <VersionPrefix>3.0.0</VersionPrefix>
         <Product>Decorator</Product>
         <Authors>Skaar</Authors>
         <Description>A code generator to generate decorator wrapper classes.</Description>
@@ -21,6 +21,7 @@
             1.0.0: Initial.
             1.1.0: Added support for generic types.
             2.0.0: Handling name collisions.
+            3.0.0: Shared types (GenerateDecorator attributes, IDecorator) moved to Skaar.Decorator.Abstractions.dll shipped in the package, instead of being generated into each assembly. Fixes CS0436 and IDecorator type mismatches when several assemblies use the generator.
         </PackageReleaseNotes>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <IsPackable>true</IsPackable>
